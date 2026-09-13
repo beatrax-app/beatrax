@@ -67,8 +67,8 @@ return [
     ],
 
     'unknown' => [
-        'not_labelled_heading' => 'Šis darījuma partneris vēl nav marķēts',
-        'not_labelled_body' => 'Nezināmo partneru marķēšana palīdz pārskatā rādīt precīzas mēneša kopsummas un finansējuma ķēdes.',
+        'not_labeled_heading' => 'Šis darījuma partneris vēl nav marķēts',
+        'not_labeled_body' => 'Nezināmo partneru marķēšana palīdz pārskatā rādīt precīzas mēneša kopsummas un finansējuma ķēdes.',
         'label_cta' => 'Marķēt šo darījuma partneri',
     ],
 

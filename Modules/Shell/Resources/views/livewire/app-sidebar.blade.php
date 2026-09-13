@@ -278,7 +278,7 @@
          counterparty is, which category it belongs to, and the shared
          knowledge the community maintains. All four are the same errand,
          and none of them is a setting. --}}
-    <div class="side-section-label">{{ Lang::get('core::sidebar.section_organise') }}</div>
+    <div class="side-section-label">{{ Lang::get('core::sidebar.section_organize') }}</div>
     {{--
         Counterparties index — the type-aware "who am I transacting
         with?" surface. Resolves to the named route

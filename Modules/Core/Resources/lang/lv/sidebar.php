@@ -12,7 +12,7 @@ return [
     'section_planning' => 'PLĀNOŠANA',
     'section_insights' => 'IESKATI',
     'section_ingestion' => 'DATU IEVADE',
-    'section_organise' => 'KĀRTOŠANA',
+    'section_organize' => 'KĀRTOŠANA',
     'section_settings' => 'IESTATĪJUMI',
 
     'nav' => [

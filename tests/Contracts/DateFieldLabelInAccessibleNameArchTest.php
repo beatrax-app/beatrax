@@ -52,11 +52,11 @@ it('carries the visible label of every date and time field into the name it comp
     $accessibleName = static function (string $html, string $buttonId): string {
         $document = RenderedMarkup::of($html);
         $button = $document->firstOrFail(sprintf('button[id="%s"]', $buttonId));
-        $labelledBy = trim((string) $button->attribute('aria-labelledby'));
+        $labeledBy = trim((string) $button->attribute('aria-labelledby'));
 
-        if ($labelledBy !== '') {
+        if ($labeledBy !== '') {
             $parts = [];
-            foreach (explode(' ', $labelledBy) as $id) {
+            foreach (explode(' ', $labeledBy) as $id) {
                 $node = $id === '' ? null : $document->first(sprintf('[id="%s"]', $id));
                 $parts[] = $node?->text() ?? '';
             }

@@ -17,9 +17,9 @@ return [
 
     'location' => [
         'database' => 'Veritabanı:',
-        'artefacts_imports' => 'İçe aktarılan ekstreler:',
-        'artefacts_mail' => 'Taranan posta:',
-        'artefacts_drop' => 'İzlenen klasör:',
+        'artifacts_imports' => 'İçe aktarılan ekstreler:',
+        'artifacts_mail' => 'Taranan posta:',
+        'artifacts_drop' => 'İzlenen klasör:',
         'backups' => 'Yedekler:',
         'secrets' => 'Bağlantı kimlik bilgileri:',
         'logs' => 'Günlükler:',
@@ -27,16 +27,16 @@ return [
 
     'copy_aria' => [
         'database' => 'Veritabanı yolunu panoya kopyala',
-        'artefacts_imports' => 'İçe aktarılan ekstrelerin yolunu panoya kopyala',
-        'artefacts_mail' => 'Taranan postanın yolunu panoya kopyala',
-        'artefacts_drop' => 'İzlenen klasörün yolunu panoya kopyala',
+        'artifacts_imports' => 'İçe aktarılan ekstrelerin yolunu panoya kopyala',
+        'artifacts_mail' => 'Taranan postanın yolunu panoya kopyala',
+        'artifacts_drop' => 'İzlenen klasörün yolunu panoya kopyala',
         'backups' => 'Yedeklerin yolunu panoya kopyala',
         'secrets' => 'Bağlantı kimlik bilgilerinin yolunu panoya kopyala',
         'logs' => 'Günlüklerin yolunu panoya kopyala',
     ],
 
-    'artefacts_heading' => 'Kaynak belgelerin yedeğin içinde değil',
-    'artefacts_body' => 'Bir yedek yalnızca veritabanını içerir, başka hiçbir şeyi. İçe aktardığın ekstreler, tarayıcının çektiği postalar ve izlenen klasöre bıraktığın fişler oldukları yerde, yukarıda listelenen üç klasörde kalır. Yedeği güvenli bir yere koymak onları kopyalamaz; yani eksiksiz bir arşiv, o klasörleri de yanına almak demektir — ya da aşağıdaki Her şeyi dışa aktar seçeneğini kullanmak, ki onları yedekle birlikte paketler.',
+    'artifacts_heading' => 'Kaynak belgelerin yedeğin içinde değil',
+    'artifacts_body' => 'Bir yedek yalnızca veritabanını içerir, başka hiçbir şeyi. İçe aktardığın ekstreler, tarayıcının çektiği postalar ve izlenen klasöre bıraktığın fişler oldukları yerde, yukarıda listelenen üç klasörde kalır. Yedeği güvenli bir yere koymak onları kopyalamaz; yani eksiksiz bir arşiv, o klasörleri de yanına almak demektir — ya da aşağıdaki Her şeyi dışa aktar seçeneğini kullanmak, ki onları yedekle birlikte paketler.',
 
     'export_heading' => 'Her şeyi dışa aktar',
     'export_body' => "Veritabanının şifrelenmiş bir kopyasını ve Beatrax'a verdiğin her kaynak belgeyi taşıyan tek bir arşiv. İstediğin yerde aç; belgelerin içinde hep oldukları gibi, geldikleri klasörlerde duruyor olacak.",

@@ -12,7 +12,7 @@ return [
     'section_planning' => 'NAČRTOVANJE',
     'section_insights' => 'VPOGLEDI',
     'section_ingestion' => 'ZAJEM PODATKOV',
-    'section_organise' => 'UREDI',
+    'section_organize' => 'UREDI',
     'section_settings' => 'NASTAVITVE',
 
     'nav' => [

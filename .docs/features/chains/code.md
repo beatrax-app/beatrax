@@ -201,7 +201,7 @@ Modules/Chains/
     [`Transfers`](../transfers/code.md)'s
     `PairLookup::counterLegOnAccount`, called with this resolver's
     own window, direction and ordering
-    (`CounterLegOrder::NearestToCentre`), no currency predicate,
+    (`CounterLegOrder::NearestToCenter`), no currency predicate,
     and no already-paired exclusion — the funding leg this arm
     links is one the transfer matcher never pairs.
   - ASN-direct — handles the empirical case where the PayPal CSV

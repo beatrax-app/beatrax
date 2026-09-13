@@ -77,12 +77,12 @@ final class Mt940Tag86Parser
     {
         // Strip in-buffer newlines so a continuation line between two
         // `?NN` subfields doesn't break the regex anchor.
-        $normalised = str_replace(["\r\n", "\r", "\n"], '', $body);
+        $normalized = str_replace(["\r\n", "\r", "\n"], '', $body);
 
         /** @var array<int, string> $out */
         $out = [];
 
-        if (preg_match_all('/\?(\d{2})([^?]*)/', $normalised, $matches, PREG_SET_ORDER) === false) {
+        if (preg_match_all('/\?(\d{2})([^?]*)/', $normalized, $matches, PREG_SET_ORDER) === false) {
             return $out;
         }
 

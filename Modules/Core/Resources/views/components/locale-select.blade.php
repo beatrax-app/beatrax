@@ -1,7 +1,7 @@
 @use('Modules\Core\Public\Enums\Locale')
 @use('Modules\Core\Public\Services\LocaleNegotiator')
 @use('Modules\Core\Public\Support\Lang')
-@props(['selected', 'labelled' => false, 'selectClass' => '', 'fieldId' => 'locale-switcher-select'])
+@props(['selected', 'labeled' => false, 'selectClass' => '', 'fieldId' => 'locale-switcher-select'])
 {{--
     The 26 languages plus the System sentinel, for every surface that asks the
     reader which language to read in: both of locale-switcher's shells and the
@@ -19,13 +19,13 @@
 
     The label is sr-only unless the caller says otherwise. A screen that also
     carries a country picker, or a settings card that heads the control with a
-    visible label of its own, passes `labelled` to suppress this one.
+    visible label of its own, passes `labeled` to suppress this one.
 
     `fieldId` is a prop rather than a passthrough attribute because the label
     above has to name the same id; a caller keeps its own so an id that other
     screens, tests and tooling already point at does not move.
 --}}
-@unless ($labelled)
+@unless ($labeled)
     <label class="sr-only" for="{{ $fieldId }}">{{ Lang::get('core::settings.language.label') }}</label>
 @endunless
 <select

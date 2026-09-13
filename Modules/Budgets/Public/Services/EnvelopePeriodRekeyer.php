@@ -121,7 +121,7 @@ final readonly class EnvelopePeriodRekeyer
                 ($buckets[$bucket]['by_currency'][$rowCurrency] ?? 0) + self::toInt($row->assigned_minor);
         }
 
-        $totalled = $this->totalled($buckets);
+        $totaled = $this->totaled($buckets);
 
         $events = [];
         foreach ($rows as $row) {
@@ -134,7 +134,7 @@ final readonly class EnvelopePeriodRekeyer
         $connection->table('envelope_assignments')->where('user_id', $userId)->delete();
 
         $now = $this->clock->now()->toDateTimeString();
-        foreach ($totalled as $bucket) {
+        foreach ($totaled as $bucket) {
             $connection->table('envelope_assignments')->insert([
                 'user_id' => $userId,
                 'category_id' => $bucket['category_id'],
@@ -180,17 +180,17 @@ final readonly class EnvelopePeriodRekeyer
      * @param  array<string, array{category_id: int, period_start: string, by_currency: array<string, int>, currency: string, created_at: mixed}>  $buckets
      * @return list<array{category_id: int, period_start: string, assigned_minor: int, currency: string, created_at: mixed}>
      */
-    private function totalled(array $buckets): array
+    private function totaled(array $buckets): array
     {
         $baseCurrency = $this->baseCurrency->forUser($this->currentUser->user());
 
-        $totalled = [];
+        $totaled = [];
         foreach ($buckets as $bucket) {
             $byCurrency = $bucket['by_currency'];
             $converted = count($byCurrency) > 1 ? $this->fx->of($byCurrency, $baseCurrency) : null;
             $whole = $converted !== null && $converted->unconverted === [] ? $converted : null;
 
-            $totalled[] = [
+            $totaled[] = [
                 'category_id' => $bucket['category_id'],
                 'period_start' => $bucket['period_start'],
                 'assigned_minor' => $whole->minor ?? array_sum($byCurrency),
@@ -199,7 +199,7 @@ final readonly class EnvelopePeriodRekeyer
             ];
         }
 
-        return $totalled;
+        return $totaled;
     }
 
     /**

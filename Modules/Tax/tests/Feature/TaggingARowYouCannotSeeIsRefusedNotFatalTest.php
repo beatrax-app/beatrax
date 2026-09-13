@@ -80,8 +80,8 @@ function tagRefusedTransaction(DatabaseManager $db, int $userId): int
 it('answers a toast rather than a 404 when the tag target is not the readers row', function (): void {
     $db = $this->app->make(DatabaseManager::class);
     $reader = tagRefusedUser('tag-refused-reader');
-    $neighbour = tagRefusedUser('tag-refused-neighbour');
-    $foreignId = tagRefusedTransaction($db, $neighbour->id);
+    $neighbor = tagRefusedUser('tag-refused-neighbour');
+    $foreignId = tagRefusedTransaction($db, $neighbor->id);
 
     $this->actingAs($reader);
 

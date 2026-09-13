@@ -16,7 +16,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 final readonly class GraphErrorMapper
 {
-    private const string UNRECOGNISED_ERROR_BODY = 'unrecognised error body';
+    private const string UNRECOGNIZED_ERROR_BODY = 'unrecognised error body';
 
     // Not in Symfony's Response: 509 is an Apache extension Microsoft
     // nonetheless documents Graph as returning under throttling.
@@ -125,7 +125,7 @@ final readonly class GraphErrorMapper
             ? self::firstNonEmptyString($err['message'] ?? null, $err['code'] ?? null)
             : null;
 
-        return $message === null ? self::UNRECOGNISED_ERROR_BODY : $this->safeMessage($message);
+        return $message === null ? self::UNRECOGNIZED_ERROR_BODY : $this->safeMessage($message);
     }
 
     private static function firstNonEmptyString(mixed ...$values): ?string

@@ -17,7 +17,7 @@ uses(RefreshDatabase::class);
 // way to the key, through a public method that has to re-check for its own
 // callers.
 
-function blindIndexEnrolmentUser(string $username): User
+function blindIndexEnrollmentUser(string $username): User
 {
     return User::query()->create([
         'username' => $username,
@@ -30,7 +30,7 @@ function blindIndexEnrolmentUser(string $username): User
 /**
  * @return list<string>
  */
-function enrolmentReadsDuring(DatabaseManager $db, callable $work): array
+function enrollmentReadsDuring(DatabaseManager $db, callable $work): array
 {
     $connection = $db->connection();
     $connection->flushQueryLog();
@@ -54,7 +54,7 @@ function enrolmentReadsDuring(DatabaseManager $db, callable $work): array
 }
 
 it('reads the enrolment state once per derive, not once per caller that asks', function (): void {
-    $userId = (int) blindIndexEnrolmentUser('blind-index-enrolment')->id;
+    $userId = (int) blindIndexEnrollmentUser('blind-index-enrolment')->id;
 
     /** @var GdkKeyringService $keyringService */
     $keyringService = $this->app->make(GdkKeyringService::class);
@@ -68,7 +68,7 @@ it('reads the enrolment state once per derive, not once per caller that asks', f
     $keyringService->generateAndPersist($userId, $session);
     $codec->derive(BlindIndexCodec::DOMAIN_COUNTERPARTY_NORMALIZED, 'warm the keyring', $userId, $session);
 
-    $reads = enrolmentReadsDuring($db, function () use ($codec, $userId, $session): void {
+    $reads = enrollmentReadsDuring($db, function () use ($codec, $userId, $session): void {
         $codec->derive(BlindIndexCodec::DOMAIN_COUNTERPARTY_NORMALIZED, 'ALBERT HEIJN 1042', $userId, $session);
     });
 
@@ -79,7 +79,7 @@ it('reads the enrolment state once per derive, not once per caller that asks', f
 // unenrolled reader's plaintext has to keep coming back unchanged, and that
 // decision is the one read this test allows.
 it('still returns the plaintext unchanged for a reader who never enabled encryption', function (): void {
-    $userId = (int) blindIndexEnrolmentUser('blind-index-unenrolled')->id;
+    $userId = (int) blindIndexEnrollmentUser('blind-index-unenrolled')->id;
 
     /** @var Session $session */
     $session = $this->app->make(Session::class);

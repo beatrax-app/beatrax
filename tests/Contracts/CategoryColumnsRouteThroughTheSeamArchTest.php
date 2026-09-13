@@ -100,8 +100,8 @@ function categorySeamArrayLiterals(array $tokens): array
             continue;
         }
 
-        $before = categorySeamNeighbour($tokens, $index, -1);
-        $after = categorySeamNeighbour($tokens, $index, 1);
+        $before = categorySeamNeighbor($tokens, $index, -1);
+        $after = categorySeamNeighbor($tokens, $index, 1);
 
         if (! in_array($before, ['[', ','], true) || ! in_array($after, [']', ','], true)) {
             continue;
@@ -123,7 +123,7 @@ function categorySeamArrayLiterals(array $tokens): array
 /**
  * @param  list<array{0:int,1:string,2:int}|string>  $tokens
  */
-function categorySeamNeighbour(array $tokens, int $index, int $step): string
+function categorySeamNeighbor(array $tokens, int $index, int $step): string
 {
     for ($i = $index + $step; isset($tokens[$i]); $i += $step) {
         $token = $tokens[$i];

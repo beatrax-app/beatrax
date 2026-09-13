@@ -99,7 +99,7 @@ final readonly class CsvPreset
         return array_values(array_filter($headers, static fn (?string $h): bool => $h !== null));
     }
 
-    public static function normaliseHeader(string $header): string
+    public static function normalizeHeader(string $header): string
     {
         $lowered = mb_strtolower(trim($header));
 

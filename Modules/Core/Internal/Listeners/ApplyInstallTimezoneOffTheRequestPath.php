@@ -23,13 +23,13 @@ final readonly class ApplyInstallTimezoneOffTheRequestPath
     // serialise the configuration to disk. Letting them observe a resolved
     // value would bake the packager's zone into a cached config — the pin no
     // shipped bundle carries, arriving by the back door.
-    private const array SERIALISES_THE_CONFIG = ['config:cache', 'optimize'];
+    private const array SERIALIZES_THE_CONFIG = ['config:cache', 'optimize'];
 
     public function __construct(private InstallTimezone $timezone) {}
 
     public function handle(CommandStarting|JobProcessing $event): void
     {
-        if ($event instanceof CommandStarting && in_array($event->command, self::SERIALISES_THE_CONFIG, true)) {
+        if ($event instanceof CommandStarting && in_array($event->command, self::SERIALIZES_THE_CONFIG, true)) {
             return;
         }
 

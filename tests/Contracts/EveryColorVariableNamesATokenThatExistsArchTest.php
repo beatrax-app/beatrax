@@ -20,7 +20,7 @@ use Tests\Contracts\Support\RepoTree;
  *
  * @return array{0: list<string>, 1: list<string>}
  */
-function colourTokensIn(string $source): array
+function colorTokensIn(string $source): array
 {
     $defined = PatternScan::all('/^\s*(--color-[a-z0-9-]+)\s*:/mi', $source);
     $referenced = PatternScan::all('/var\(\s*(--color-[a-z0-9-]+)/i', $source);
@@ -29,13 +29,13 @@ function colourTokensIn(string $source): array
 }
 
 /** @return array{0: list<string>, 1: list<string>} the tokens defined, then every one referenced */
-function colourTokensInStylesheet(): array
+function colorTokensInStylesheet(): array
 {
-    return colourTokensIn((string) file_get_contents(base_path('resources/css/app.css')));
+    return colorTokensIn((string) file_get_contents(base_path('resources/css/app.css')));
 }
 
 it('does not reach for a colour token that was never declared', function (): void {
-    [$defined, $referenced] = colourTokensInStylesheet();
+    [$defined, $referenced] = colorTokensInStylesheet();
 
     // 22 tokens stand in the stylesheet today, and every one of them is used.
     // A pattern that read none of them would call every reference below
@@ -58,7 +58,7 @@ it('does not reach for a colour token that was never declared', function (): voi
 // write `style="color: var(--color-x)"` inline, and a name misspelt there is
 // the same silent fallback in the one place no stylesheet reader looks.
 it('does not reach for an undeclared colour token from a template either', function (): void {
-    [$defined] = colourTokensInStylesheet();
+    [$defined] = colorTokensInStylesheet();
     $views = RepoTree::files(RepoTree::EVERY_BLADE_VIEW);
 
     expect(count($views))->toBeGreaterThan(
@@ -70,7 +70,7 @@ it('does not reach for an undeclared colour token from a template either', funct
     $references = 0;
 
     foreach ($views as $path) {
-        [, $referenced] = colourTokensIn((string) file_get_contents($path));
+        [, $referenced] = colorTokensIn((string) file_get_contents($path));
         $references += count($referenced);
 
         foreach (array_diff($referenced, $defined) as $token) {
@@ -105,7 +105,7 @@ it('reads a declaration and a reference apart', function (): void {
         .ghost { color: var(--color-muted, oklch(60% 0 0)); }
         CSS;
 
-    [$defined, $referenced] = colourTokensIn($css);
+    [$defined, $referenced] = colorTokensIn($css);
 
     expect($defined)->toBe(['--color-text-muted']);
     expect($referenced)->toBe(['--color-text-muted', '--color-muted']);

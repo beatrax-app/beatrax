@@ -148,9 +148,11 @@ it('anchors on text the shipped activity really carries', function (): void {
     }
 
     if ($upstream === null) {
-        expect(true)->toBeTrue();
-
-        return;
+        test()->markTestSkipped(
+            'vendor/nativephp/mobile/resources/androidstudio/'.NOTIFICATION_ACTIVITY_RELATIVE.' is not present '
+            .'under either Composer root, so this anchor is answered in no job at all. It reported a pass '
+            .'instead of saying so; .github/test-skip-budget.json records where it stands.',
+        );
     }
 
     expect(substr_count($upstream, NOTIFICATION_CALLBACK_ANCHOR))->toBe(1);

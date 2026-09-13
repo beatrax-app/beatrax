@@ -16,10 +16,10 @@ final readonly class ClusterKeyComposer
         string $originalCurrencyCode,
         string $cadenceBand,
     ): string {
-        $direction = self::normalisePart($direction);
-        $counterparty = self::normalisePart($counterpartyKey);
-        $currency = self::normalisePart($originalCurrencyCode);
-        $cadence = self::normalisePart($cadenceBand);
+        $direction = self::normalizePart($direction);
+        $counterparty = self::normalizePart($counterpartyKey);
+        $currency = self::normalizePart($originalCurrencyCode);
+        $cadence = self::normalizePart($cadenceBand);
 
         return $direction.'::'.$counterparty.'::'.$currency.'::'.$cadence;
     }
@@ -28,7 +28,7 @@ final readonly class ClusterKeyComposer
     // or Cyrillic merchant reduces to an empty token and merges with every other
     // one, and `&` is kept because FingerprintComposer::normalize() keeps it, so
     // `a&b` and `a b` arrive here as two merchants and must leave as two keys.
-    private static function normalisePart(string $value): string
+    private static function normalizePart(string $value): string
     {
         $lower = mb_strtolower($value, 'UTF-8');
         $hyphenated = PatternScan::replace('/[^\p{L}\p{N}&]+/u', '-', $lower);

@@ -162,9 +162,9 @@ final readonly class RedactSecretsProcessor implements ProcessorInterface
             return false;
         }
 
-        $normalised = strtolower(str_replace(['-', ' '], '_', $key));
+        $normalized = strtolower(str_replace(['-', ' '], '_', $key));
 
-        return in_array($normalised, self::SECRET_KEYS, true)
-            || in_array($normalised, self::PRIVATE_CONTENT_KEYS, true);
+        return in_array($normalized, self::SECRET_KEYS, true)
+            || in_array($normalized, self::PRIVATE_CONTENT_KEYS, true);
     }
 }

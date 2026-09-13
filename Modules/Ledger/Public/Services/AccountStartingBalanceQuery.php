@@ -104,7 +104,7 @@ final readonly class AccountStartingBalanceQuery
             return null;
         }
 
-        return SafeDate::normalisedDayOrNull($rawDate);
+        return SafeDate::normalizedDayOrNull($rawDate);
     }
 
     /**

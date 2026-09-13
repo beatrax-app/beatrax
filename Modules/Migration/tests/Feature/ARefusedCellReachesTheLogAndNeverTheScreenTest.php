@@ -101,7 +101,7 @@ it('leaves neither the run nor a staged row of the file it refused', function ()
 
 it('shows the reader one fixed line and none of the cell it refused', function (): void {
     $this->component
-        ->assertSet('uploadError', Lang::get('migration::new.errors.unrecognised'))
+        ->assertSet('uploadError', Lang::get('migration::new.errors.unrecognized'))
         ->assertDontSee(REFUSED_OUTFLOW_CELL)
         ->assertDontSee('Register.csv')
         ->assertDontSee('Outflow')

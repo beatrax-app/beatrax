@@ -33,20 +33,20 @@ function purposeStringRepoRoot(): string
 }
 
 /** @return array<string, array<string, string>> locale => Info.plist key => sentence */
-function localisedPurposeStrings(): array
+function localizedPurposeStrings(): array
 {
-    $localised = [];
+    $localized = [];
 
     foreach (glob(purposeStringRepoRoot().'/Modules/Mobile/Resources/ios/lang/*/purpose-strings.php') ?: [] as $file) {
         /** @var array<string, string> $strings */
         $strings = require $file;
 
-        $localised[basename(dirname($file))] = $strings;
+        $localized[basename(dirname($file))] = $strings;
     }
 
-    ksort($localised);
+    ksort($localized);
 
-    return $localised;
+    return $localized;
 }
 
 /** @return list<string> every locale the interface ships in, read off the lang tree */
@@ -64,22 +64,22 @@ it('carries a purpose string for every language the interface ships in', functio
 
     expect($shipped)->toHaveCount(26);
 
-    $localised = array_keys(localisedPurposeStrings());
-    sort($localised);
+    $localized = array_keys(localizedPurposeStrings());
+    sort($localized);
 
-    expect($localised)->toBe($shipped, sprintf(
+    expect($localized)->toBe($shipped, sprintf(
         "The interface ships in %d languages and the purpose strings in %d.\n".
         'A locale added to the interface needs a '.
         'Modules/Mobile/Resources/ios/lang/<locale>/purpose-strings.php as well.',
         count($shipped),
-        count($localised),
+        count($localized),
     ));
 });
 
 it('declares every purpose-string key in every locale', function (): void {
     $missing = [];
 
-    foreach (localisedPurposeStrings() as $locale => $strings) {
+    foreach (localizedPurposeStrings() as $locale => $strings) {
         foreach (PURPOSE_STRING_KEYS as $key) {
             $value = $strings[$key] ?? null;
 
@@ -95,7 +95,7 @@ it('declares every purpose-string key in every locale', function (): void {
 it('names the product in every language rather than only in English', function (): void {
     $anonymous = [];
 
-    foreach (localisedPurposeStrings() as $locale => $strings) {
+    foreach (localizedPurposeStrings() as $locale => $strings) {
         foreach (PURPOSE_STRING_KEYS as $key) {
             if (! str_contains($strings[$key] ?? '', 'Beatrax')) {
                 $anonymous[] = $locale.' · '.$key;
@@ -111,7 +111,7 @@ it('names the product in every language rather than only in English', function (
 it('never repeats a sentence a dependency wrote about its own product', function (): void {
     $inherited = [];
 
-    foreach (localisedPurposeStrings() as $locale => $strings) {
+    foreach (localizedPurposeStrings() as $locale => $strings) {
         foreach ($strings as $key => $value) {
             if (in_array($value, PURPOSE_STRINGS_FROM_A_PLUGIN, true)) {
                 $inherited[] = $locale.' · '.$key;
@@ -125,7 +125,7 @@ it('never repeats a sentence a dependency wrote about its own product', function
 it('claims no capability the app has in no language', function (): void {
     $claimed = [];
 
-    foreach (localisedPurposeStrings() as $locale => $strings) {
+    foreach (localizedPurposeStrings() as $locale => $strings) {
         if (str_contains(strtolower($strings['NSCameraUsageDescription'] ?? ''), 'barcode')) {
             $claimed[] = $locale;
         }
@@ -142,7 +142,7 @@ it('takes the Info.plist value from the same file the translations live in', fun
         is_file(base_path('mobile-app/config/nativephp.php')) ? 'mobile-app/config/nativephp.php' : 'config/nativephp.php',
     );
 
-    $english = localisedPurposeStrings()['en'];
+    $english = localizedPurposeStrings()['en'];
 
     foreach (PURPOSE_STRING_KEYS as $key) {
         expect($config['permissions'][$key] ?? null)->toBe($english[$key]);
@@ -173,7 +173,7 @@ function runPurposeStringPatch(string $root): Process
     expect($scripts)->not->toBeNull();
 
     $process = new Process(
-        [PHP_BINARY, $scripts.'/nativephp_ios_purpose_string_localisations.php'],
+        [PHP_BINARY, $scripts.'/nativephp_ios_purpose_string_localizations.php'],
         env: ['BEATRAX_NATIVE_ROOT' => $root],
     );
     $process->run();
@@ -188,7 +188,7 @@ it('writes one .lproj folder per language into the synchronized group', function
 
     expect($process->isSuccessful())->toBeTrue($process->getErrorOutput());
     expect(glob($root.'/nativephp/ios/NativePHP/*.lproj/InfoPlist.strings') ?: [])
-        ->toHaveCount(count(localisedPurposeStrings()));
+        ->toHaveCount(count(localizedPurposeStrings()));
 });
 
 it('writes each sentence as a quoted, terminated .strings entry', function (): void {
@@ -200,7 +200,7 @@ it('writes each sentence as a quoted, terminated .strings entry', function (): v
 
     expect($dutch)
         ->toContain('"NSFaceIDUsageDescription" = "')
-        ->toContain(localisedPurposeStrings()['nl']['NSFaceIDUsageDescription'])
+        ->toContain(localizedPurposeStrings()['nl']['NSFaceIDUsageDescription'])
         ->toContain('";');
 });
 

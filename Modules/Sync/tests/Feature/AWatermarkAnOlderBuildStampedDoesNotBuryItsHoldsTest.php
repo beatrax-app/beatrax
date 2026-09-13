@@ -31,7 +31,7 @@ function buriedHoldUser(): User
     ]);
 }
 
-function buriedHoldEnrol(User $user): Session
+function buriedHoldEnroll(User $user): Session
 {
     /** @var Session $session */
     $session = app(Session::class);
@@ -77,7 +77,7 @@ function buriedHoldStampAsOlderBuildDid(User $user, string $at): void
 
 it('looks again at a hold the previous build stamped a watermark over', function (): void {
     $user = buriedHoldUser();
-    $session = buriedHoldEnrol($user);
+    $session = buriedHoldEnroll($user);
 
     buriedHoldQuarantine($user, '2026-09-10 22:44:19');
     buriedHoldStampAsOlderBuildDid($user, '2026-09-10 22:48:53');
@@ -101,7 +101,7 @@ it('looks again at a hold the previous build stamped a watermark over', function
 // stamped must still close, or every request replays the whole quarantine.
 it('still closes the window on a watermark this build stamped itself', function (): void {
     $user = buriedHoldUser();
-    $session = buriedHoldEnrol($user);
+    $session = buriedHoldEnroll($user);
 
     buriedHoldQuarantine($user, '2026-09-10 22:44:19');
 
@@ -140,7 +140,7 @@ it('answers nothing on an install that holds no keyring at all', function (): vo
 // rather than silently reinstating the burial.
 it('names the reach of the build alongside the keyring it evaluated', function (): void {
     $user = buriedHoldUser();
-    buriedHoldEnrol($user);
+    buriedHoldEnroll($user);
 
     /** @var HistoryReprojector $reprojector */
     $reprojector = app(HistoryReprojector::class);

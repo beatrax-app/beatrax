@@ -20,9 +20,9 @@ return [
 
     'location' => [
         'database' => 'Andmebaas:',
-        'artefacts_imports' => 'Imporditud väljavõtted:',
-        'artefacts_mail' => 'Skannitud kirjad:',
-        'artefacts_drop' => 'Jälgitav kaust:',
+        'artifacts_imports' => 'Imporditud väljavõtted:',
+        'artifacts_mail' => 'Skannitud kirjad:',
+        'artifacts_drop' => 'Jälgitav kaust:',
         'backups' => 'Varukoopiad:',
         'secrets' => 'Ühenduste mandaadid:',
         'logs' => 'Logid:',
@@ -30,16 +30,16 @@ return [
 
     'copy_aria' => [
         'database' => 'Kopeeri andmebaasi asukoht lõikelauale',
-        'artefacts_imports' => 'Kopeeri imporditud väljavõtete asukoht lõikelauale',
-        'artefacts_mail' => 'Kopeeri skannitud kirjade asukoht lõikelauale',
-        'artefacts_drop' => 'Kopeeri jälgitava kausta asukoht lõikelauale',
+        'artifacts_imports' => 'Kopeeri imporditud väljavõtete asukoht lõikelauale',
+        'artifacts_mail' => 'Kopeeri skannitud kirjade asukoht lõikelauale',
+        'artifacts_drop' => 'Kopeeri jälgitava kausta asukoht lõikelauale',
         'backups' => 'Kopeeri varukoopiate asukoht lõikelauale',
         'secrets' => 'Kopeeri ühenduste mandaatide asukoht lõikelauale',
         'logs' => 'Kopeeri logide asukoht lõikelauale',
     ],
 
-    'artefacts_heading' => 'Sinu lähtedokumendid ei ole varukoopia sees',
-    'artefacts_body' => 'Varukoopia sisaldab andmebaasi ja ei midagi muud. Väljavõtted, mille importisid, kirjad, mille skanner tõi, ja tšekid, mille jälgitavasse kausta panid, jäävad sinna, kus nad on — kolme ülalloetletud kausta. Varukoopia turvalisse kohta viimine neid kaasa ei kopeeri, seega täielik arhiiv tähendab ka nende kaustade kaasavõtmist — või allolevat käsku Ekspordi kõik, mis pakib need koos varukoopiaga kokku.',
+    'artifacts_heading' => 'Sinu lähtedokumendid ei ole varukoopia sees',
+    'artifacts_body' => 'Varukoopia sisaldab andmebaasi ja ei midagi muud. Väljavõtted, mille importisid, kirjad, mille skanner tõi, ja tšekid, mille jälgitavasse kausta panid, jäävad sinna, kus nad on — kolme ülalloetletud kausta. Varukoopia turvalisse kohta viimine neid kaasa ei kopeeri, seega täielik arhiiv tähendab ka nende kaustade kaasavõtmist — või allolevat käsku Ekspordi kõik, mis pakib need koos varukoopiaga kokku.',
 
     'export_heading' => 'Ekspordi kõik',
     'export_body' => 'Üks arhiiv, milles on sinu andmebaasi krüpteeritud koopia ja iga lähtedokument, mille oled Beatraxile andnud. Paki see lahti kus tahad ja dokumendid on seal sees täpselt sellisena, nagu nad alati olid, kaustades, kust nad tulid.',

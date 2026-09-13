@@ -232,7 +232,7 @@ final class TransactionsList extends Component
         TransactionFilterOptions $filterOptions,
         BaseCurrency $baseCurrency,
     ): View {
-        $this->normaliseFilters();
+        $this->normalizeFilters();
 
         return $this->isSearchActive()
             ? $this->renderSearch($currentUser, $views, $searchQuery, $rows, $filterOptions, $baseCurrency)
@@ -243,7 +243,7 @@ final class TransactionsList extends Component
     // cleaning it on the way to the query alone left the chip partial
     // subscripting [0] on a shape the address bar chose. Coerced on the
     // property instead, both readers see the same filter.
-    private function normaliseFilters(): void
+    private function normalizeFilters(): void
     {
         $this->filterAccounts = TransactionFilterInputs::positiveIds($this->filterAccounts);
         $this->filterCategories = TransactionFilterInputs::positiveIds($this->filterCategories);

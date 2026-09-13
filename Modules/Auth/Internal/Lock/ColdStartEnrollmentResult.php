@@ -10,7 +10,7 @@ namespace Modules\Auth\Internal\Lock;
 /**
  * @link ../../../../.docs/design/cold-start-biometric-unlock.md
  */
-enum ColdStartEnrolmentResult
+enum ColdStartEnrollmentResult
 {
     case Enrolled;
 

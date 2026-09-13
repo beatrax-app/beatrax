@@ -67,8 +67,8 @@ return [
     ],
 
     'unknown' => [
-        'not_labelled_heading' => 'Ova protustranka još nije označena',
-        'not_labelled_body' => 'Označavanje nepoznatih pomaže nadzornoj ploči prikazati točne mjesečne ukupne iznose i lance financiranja.',
+        'not_labeled_heading' => 'Ova protustranka još nije označena',
+        'not_labeled_body' => 'Označavanje nepoznatih pomaže nadzornoj ploči prikazati točne mjesečne ukupne iznose i lance financiranja.',
         'label_cta' => 'Označi ovu protustranku',
     ],
 

@@ -26,7 +26,7 @@ beforeEach(function (): void {
     $this->actingAs($this->user);
 
     $this->onScreen = ForecastScenario::factory()->create(['user_id' => $this->user->id, 'name' => 'On screen']);
-    $this->neighbour = ForecastScenario::factory()->create(['user_id' => $this->user->id, 'name' => 'Neighbour']);
+    $this->neighbor = ForecastScenario::factory()->create(['user_id' => $this->user->id, 'name' => 'Neighbour']);
 });
 
 function scenarioSidebarSnapshot(int $scenarioId): string
@@ -41,11 +41,11 @@ it('refuses a payload that moves the delete onto a second scenario', function ()
     LivewireRoundTrip::tamper(
         $this,
         scenarioSidebarSnapshot($this->onScreen->id),
-        ['scenarioId' => $this->neighbour->id],
+        ['scenarioId' => $this->neighbor->id],
         [['path' => '', 'method' => 'deleteScenario', 'params' => []]],
     )->assertForbidden();
 
-    $this->assertDatabaseHas('forecast_scenarios', ['id' => $this->neighbour->id]);
+    $this->assertDatabaseHas('forecast_scenarios', ['id' => $this->neighbor->id]);
     $this->assertDatabaseHas('forecast_scenarios', ['id' => $this->onScreen->id]);
 });
 
@@ -58,5 +58,5 @@ it('still deletes the scenario the sidebar was mounted for', function (): void {
     )->assertOk();
 
     $this->assertDatabaseMissing('forecast_scenarios', ['id' => $this->onScreen->id]);
-    $this->assertDatabaseHas('forecast_scenarios', ['id' => $this->neighbour->id]);
+    $this->assertDatabaseHas('forecast_scenarios', ['id' => $this->neighbor->id]);
 });

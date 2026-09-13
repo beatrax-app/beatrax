@@ -54,10 +54,10 @@
     </section>
 
     {{-- ─── Section 2: Artefacts are not inside the backup ───────── --}}
-    <section class="space-y-3" aria-labelledby="help-locations-artefacts-heading">
-        <h2 id="help-locations-artefacts-heading" class="text-lg font-semibold text-[var(--color-text)]">{{ Lang::get('core::help.artefacts_heading') }}</h2>
+    <section class="space-y-3" aria-labelledby="help-locations-artifacts-heading">
+        <h2 id="help-locations-artifacts-heading" class="text-lg font-semibold text-[var(--color-text)]">{{ Lang::get('core::help.artifacts_heading') }}</h2>
         <p class="text-[var(--color-text-muted)]">
-            {{ Lang::get('core::help.artefacts_body') }}
+            {{ Lang::get('core::help.artifacts_body') }}
         </p>
     </section>
 

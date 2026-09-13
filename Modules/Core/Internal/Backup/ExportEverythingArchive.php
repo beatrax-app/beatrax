@@ -111,8 +111,8 @@ final readonly class ExportEverythingArchive
         $writer->open($zipPath);
         $writer->addFile($encrypted, $backupEntry);
 
-        foreach (UserDataLocations::artefacts() as $key => $directory) {
-            $this->addDirectory($writer, $directory, 'artefacts/'.$key);
+        foreach (UserDataLocations::artifacts() as $key => $directory) {
+            $this->addDirectory($writer, $directory, 'artifacts/'.$key);
         }
 
         $writer->finish();

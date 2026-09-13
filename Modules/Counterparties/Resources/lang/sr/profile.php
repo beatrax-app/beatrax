@@ -67,8 +67,8 @@ return [
     ],
 
     'unknown' => [
-        'not_labelled_heading' => 'Ova druga strana još nije označena',
-        'not_labelled_body' => 'Označavanje nepoznatih pomaže kontrolnoj tabli da prikaže tačne mesečne ukupne iznose i lance finansiranja.',
+        'not_labeled_heading' => 'Ova druga strana još nije označena',
+        'not_labeled_body' => 'Označavanje nepoznatih pomaže kontrolnoj tabli da prikaže tačne mesečne ukupne iznose i lance finansiranja.',
         'label_cta' => 'Označi ovu drugu stranu',
     ],
 

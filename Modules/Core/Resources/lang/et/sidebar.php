@@ -12,7 +12,7 @@ return [
     'section_planning' => 'PLANEERIMINE',
     'section_insights' => 'TÄHELEPANEKUD',
     'section_ingestion' => 'ANDMED SISSE',
-    'section_organise' => 'KORRASTA',
+    'section_organize' => 'KORRASTA',
     'section_settings' => 'SEADED',
 
     'nav' => [

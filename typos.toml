@@ -1,4 +1,24 @@
 [default]
+# `locale` is deliberately unset, and this is the record of why rather than an
+# omission. This repository spells identifiers American and reader-facing
+# English British — see .docs/conventions/one-dialect-for-identifiers.md.
+#
+# typos reads a file as a stream of words and has no idea which of them are
+# code, so the setting cannot express that split. Measured on the tree with the
+# identifier half already converted, `--locale en-us` reports 1,741 hits: 870 in
+# comments, 757 in string literals, 114 in Markdown and config prose, and zero
+# in an identifier and zero in a file name. Every one of them is correct — 112
+# are the guard below spelling out the words it forbids, and the rest is British
+# copy and British prose the convention keeps.
+#
+# The half a spell-checker cannot see is held by a guard that can tell a name
+# from a sentence, at
+# tests/Contracts/AnIdentifierIsAmericanAndItsCopyIsBritishArchTest.php. That
+# guard also carries words this dictionary accepts and the convention does not
+# — `authoriser`, `mislabelled`, `tokenising`, `credentialled`, `uncategorised`
+# — so turning the locale on here would not have covered the identifier half
+# even where it was free.
+
 # Hotkey mockup notation like [e]rror, [s]earch in keyboard-shortcut examples,
 # and SQL verbs written with a capitalised keyword plus an English suffix —
 # the tokeniser splits "JOINed" into "JOI" + "Ned" and flags the tail.

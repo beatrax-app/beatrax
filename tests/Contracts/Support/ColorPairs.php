@@ -13,11 +13,11 @@ use Modules\Core\Public\Support\PatternScan;
 /**
  * @link ../../../.docs/conventions/invariants-from-shipped-failures.md#a-pair-of-colours-declared-together-is-measurable-without-a-browser
  */
-final class ColourPairs
+final class ColorPairs
 {
     private const UNKNOWABLE = '__blade__';
 
-    private const BOTH = [ThemeColour::LIGHT, ThemeColour::DARK];
+    private const BOTH = [ThemeColor::LIGHT, ThemeColor::DARK];
 
     /**
      * @return list<array{file: string, line: int, themes: list<string>, background: string, color: string}>
@@ -89,14 +89,14 @@ final class ColourPairs
             // half of the `.thing` rule below, which is measured through it by
             // darkOverrides(). Reading it twice reports the override's own
             // partial declarations as a pairing no render produces.
-            if ($rule['themes'] === [ThemeColour::DARK] && self::overridesABaseRule($rule['selector'])) {
+            if ($rule['themes'] === [ThemeColor::DARK] && self::overridesABaseRule($rule['selector'])) {
                 continue;
             }
 
             foreach ($rule['themes'] as $theme) {
                 $properties = $rule['properties'];
 
-                if ($theme === ThemeColour::DARK) {
+                if ($theme === ThemeColor::DARK) {
                     foreach (self::split($rule['selector'], ',') as $selector) {
                         $properties = array_merge($properties, $overrides[$selector] ?? []);
                     }
@@ -130,9 +130,9 @@ final class ColourPairs
                 }
 
                 $properties = self::properties($variant);
-                $colours = array_intersect_key($properties, array_flip(['background', 'background-color', 'color']));
+                $colors = array_intersect_key($properties, array_flip(['background', 'background-color', 'color']));
 
-                if ($properties === [] || implode('', $colours) !== str_replace(self::UNKNOWABLE, '', implode('', $colours))) {
+                if ($properties === [] || implode('', $colors) !== str_replace(self::UNKNOWABLE, '', implode('', $colors))) {
                     $opaque[] = sprintf('%s:%s  ', $path, $attribute['line']).PatternScan::replace('/\s+/', ' ', trim($attribute['style']));
                 }
             }
@@ -161,7 +161,7 @@ final class ColourPairs
                 }
 
                 $backgrounds = self::grounds($pair['background'], $theme);
-                $text = self::colour($pair['color'], $theme);
+                $text = self::color($pair['color'], $theme);
 
                 if ($backgrounds === null || $text === null) {
                     $report['unreadable'][] = sprintf('%s  background: %s; color: %s;', $where, $pair['background'], $pair['color']);
@@ -176,8 +176,8 @@ final class ColourPairs
                 }
 
                 foreach ($backgrounds as $background) {
-                    $ground = ThemeColour::over($background, ThemeColour::ground($theme));
-                    $ratio = ThemeColour::ratio(ThemeColour::over($text, $ground), $ground);
+                    $ground = ThemeColor::over($background, ThemeColor::ground($theme));
+                    $ratio = ThemeColor::ratio(ThemeColor::over($text, $ground), $ground);
 
                     if ($worst === null || $ratio < $worst[1]) {
                         $worst = [$theme, $ratio];
@@ -191,7 +191,7 @@ final class ColourPairs
 
             $report['measured']++;
 
-            if ($worst[1] < ThemeColour::FLOOR) {
+            if ($worst[1] < ThemeColor::FLOOR) {
                 $report['failing'][] = sprintf(
                     '%s  in %s  background: %s; color: %s;  reads %.2f:1',
                     $where,
@@ -252,7 +252,7 @@ final class ColourPairs
     private static function grounds(string $value, string $theme): ?array
     {
         if (preg_match('/^(?:linear|radial|conic)-gradient\((.*)\)$/is', trim($value), $gradient) !== 1) {
-            $single = self::colour($value, $theme);
+            $single = self::color($value, $theme);
 
             return $single === null ? null : [$single];
         }
@@ -260,7 +260,7 @@ final class ColourPairs
         $stops = [];
         foreach (self::split($gradient[1], ',') as $stop) {
             $stop = PatternScan::replace('/\s+-?[0-9.]+(%|[a-z]+)\s*$/i', '', trim($stop));
-            $resolved = self::colour($stop, $theme);
+            $resolved = self::color($stop, $theme);
 
             if ($resolved !== null) {
                 $stops[] = $resolved;
@@ -275,20 +275,20 @@ final class ColourPairs
     /**
      * @return ?array{0: float, 1: float, 2: float, 3: float}
      */
-    private static function colour(string $value, string $theme): ?array
+    private static function color(string $value, string $theme): ?array
     {
         if (str_contains($value, self::UNKNOWABLE)) {
             return null;
         }
 
-        $whole = ThemeColour::resolve($value, $theme);
+        $whole = ThemeColor::resolve($value, $theme);
 
         if ($whole !== null) {
             return $whole;
         }
 
-        foreach (ThemeColour::split($value, ' ') as $component) {
-            $part = ThemeColour::resolve($component, $theme);
+        foreach (ThemeColor::split($value, ' ') as $component) {
+            $part = ThemeColor::resolve($component, $theme);
 
             if ($part !== null) {
                 return $part;
@@ -414,11 +414,11 @@ final class ColourPairs
     private static function themesFor(string $selector, bool $night): array
     {
         if ($night || preg_match('/(^|[\s,>+~(])(:root|html)?\.dark\b/', $selector) === 1) {
-            return [ThemeColour::DARK];
+            return [ThemeColor::DARK];
         }
 
         if (preg_match('/:not\(\s*\.dark\s*\)|\.light\b/', $selector) === 1) {
-            return [ThemeColour::LIGHT];
+            return [ThemeColor::LIGHT];
         }
 
         return self::BOTH;
@@ -447,7 +447,7 @@ final class ColourPairs
         $overrides = [];
 
         foreach ($rules as $rule) {
-            if ($rule['themes'] !== [ThemeColour::DARK]) {
+            if ($rule['themes'] !== [ThemeColor::DARK]) {
                 continue;
             }
 
@@ -494,6 +494,6 @@ final class ColourPairs
      */
     private static function split(string $text, string $separator): array
     {
-        return ThemeColour::split($text, $separator);
+        return ThemeColor::split($text, $separator);
     }
 }

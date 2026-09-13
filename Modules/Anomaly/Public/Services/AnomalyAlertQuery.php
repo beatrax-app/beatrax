@@ -54,7 +54,7 @@ final readonly class AnomalyAlertQuery
 
         $this->applyCursor($query, $cursorDetectedAt, $cursorId);
 
-        return $this->materialise($user, $query->get());
+        return $this->materialize($user, $query->get());
     }
 
     /**
@@ -127,7 +127,7 @@ final readonly class AnomalyAlertQuery
 
         $this->applyCursor($query, $cursorDetectedAt, $cursorId);
 
-        return $this->materialise($user, $query->get());
+        return $this->materialize($user, $query->get());
     }
 
     // The id is derived from the alert's own columns, so it sorts in hash order,
@@ -151,7 +151,7 @@ final readonly class AnomalyAlertQuery
      * @param  Collection<int, stdClass>  $rows
      * @return list<AnomalyAlertDto>
      */
-    private function materialise(User $user, Collection $rows): array
+    private function materialize(User $user, Collection $rows): array
     {
         if ($rows->isEmpty()) {
             return [];

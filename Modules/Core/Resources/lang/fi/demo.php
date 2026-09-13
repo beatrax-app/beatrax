@@ -6,7 +6,7 @@ return [
     'goal_emergency_fund' => 'Hätävara',
     'goal_japan_trip' => 'Japanin-matka',
     'goal_replace_laptop' => 'Kannettavan vaihto',
-    'goal_winter_tyres' => 'Talvirenkaat',
+    'goal_winter_tires' => 'Talvirenkaat',
     'goal_ryokan_stay' => 'Ryokan-yöpyminen',
     'goal_shinkansen_pass' => 'Shinkansen-lippu',
     'pot_emergency_fund' => 'Hätävara',

@@ -25,7 +25,7 @@ final class AddOneOffPayload extends ScenarioMutationPayload
         public readonly ?string $note = null,
     ) {
         $this->date = self::assertCalendarDay($date, 'date');
-        $this->currency = self::normalisedCurrency($currency);
+        $this->currency = self::normalizedCurrency($currency);
         // ScenarioApplier reads any non-'income' direction as an expense sign flip,
         // so a corrupted row has to raise here rather than change the sign.
         if (Direction::tryFrom($direction) === null) {

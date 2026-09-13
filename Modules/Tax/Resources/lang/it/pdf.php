@@ -11,7 +11,7 @@ return [
     'total_income_label' => 'Totale reddito:',
 
     'empty' => 'Nessuna transazione etichettata ai fini fiscali per :year.',
-    'uncategorised' => 'Senza categoria',
+    'uncategorized' => 'Senza categoria',
 
     'col_date' => 'Data',
     'col_counterparty' => 'Controparte',

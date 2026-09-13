@@ -19,6 +19,41 @@ use Tests\Contracts\Support\RepoTree;
 // the documented undo. A sixth producer is free to be a deliberate exception —
 // it has to be argued here rather than shipped by omission.
 
+// Read to the call's balanced close rather than to the end of the line. Both
+// halves used to have to sit on one line, so a producer whose argument the
+// formatter wrapped was not a producer at all — and a NEW one written that way
+// leaves the count below at five and passes. A snapshot with no keyring beside
+// it restores anywhere else as a ledger nothing can read, silently.
+/**
+ * @return list<string> the argument text of every `statement(...)` call in $source
+ */
+function snapshotStatementArguments(string $source): array
+{
+    $arguments = [];
+    $offset = 0;
+
+    while (($at = strpos($source, 'statement(', $offset)) !== false) {
+        $from = $at + strlen('statement(');
+        $depth = 1;
+        $cursor = $from;
+        $length = strlen($source);
+
+        while ($depth > 0 && $cursor < $length) {
+            $depth += match ($source[$cursor]) {
+                '(' => 1,
+                ')' => -1,
+                default => 0,
+            };
+            $cursor++;
+        }
+
+        $arguments[] = substr($source, $from, $cursor - $from - 1);
+        $offset = $cursor;
+    }
+
+    return $arguments;
+}
+
 /**
  * The line has to ISSUE the statement, not name it. Four files mention
  * `VACUUM INTO` only in a comment or a command description, and one of them is
@@ -38,8 +73,8 @@ function snapshotProducers(): array
             continue;
         }
 
-        foreach (explode("\n", $source) as $line) {
-            if (str_contains($line, 'VACUUM INTO') && str_contains($line, 'statement(')) {
+        foreach (snapshotStatementArguments($source) as $arguments) {
+            if (str_contains($arguments, 'VACUUM INTO')) {
                 $relative = str_replace($prefix, '', $path);
                 $producers[$relative] = ($producers[$relative] ?? 0) + 1;
             }

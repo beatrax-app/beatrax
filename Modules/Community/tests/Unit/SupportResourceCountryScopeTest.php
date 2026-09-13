@@ -12,7 +12,7 @@ use Modules\Community\Public\Services\SupportResourceProvider;
 
 function supportCorpusFixture(string $root): void
 {
-    foreach (['ch' => 'Swiss', 'es' => 'Spanish', 'international' => 'Global'] as $code => $flavour) {
+    foreach (['ch' => 'Swiss', 'es' => 'Spanish', 'international' => 'Global'] as $code => $flavor) {
         $dir = $root.'/support';
         @mkdir($dir, 0777, true);
         file_put_contents($dir.sprintf('/%s.yaml', $code), <<<YAML
@@ -20,7 +20,7 @@ function supportCorpusFixture(string $root): void
               - name: Sanitas
                 type: merchant
                 cancel_url: "https://example.test/{$code}/cancel"
-                notes: "{$flavour} Sanitas"
+                notes: "{$flavor} Sanitas"
             YAML);
     }
 

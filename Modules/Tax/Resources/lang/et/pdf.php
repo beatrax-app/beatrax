@@ -11,7 +11,7 @@ return [
     'total_income_label' => 'Tulu kokku:',
 
     'empty' => 'Aasta :year kohta pole ühtegi maksumärgendiga tehingut.',
-    'uncategorised' => 'Kategoriseerimata',
+    'uncategorized' => 'Kategoriseerimata',
 
     'col_date' => 'Kuupäev',
     'col_counterparty' => 'Vastaspool',

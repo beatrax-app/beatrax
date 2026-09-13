@@ -189,7 +189,7 @@
 
         <div @class(['no-cat-section' => $isNoCategory])>
             {{-- {{ }} already escapes — an extra e() double-encodes & < '. --}}
-            <h2>{{ $isNoCategory ? Lang::get('tax::pdf.uncategorised') : $catName }}</h2>
+            <h2>{{ $isNoCategory ? Lang::get('tax::pdf.uncategorized') : $catName }}</h2>
 
             <table class="tx-table">
                 <thead>

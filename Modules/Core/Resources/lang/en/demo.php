@@ -6,7 +6,7 @@ return [
     'goal_emergency_fund' => 'Emergency fund',
     'goal_japan_trip' => 'Japan trip',
     'goal_replace_laptop' => 'Replace the laptop',
-    'goal_winter_tyres' => 'Winter tyres',
+    'goal_winter_tires' => 'Winter tyres',
     'goal_ryokan_stay' => 'Ryokan stay',
     'goal_shinkansen_pass' => 'Shinkansen pass',
     'pot_emergency_fund' => 'Emergency fund',

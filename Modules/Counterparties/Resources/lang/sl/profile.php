@@ -67,8 +67,8 @@ return [
     ],
 
     'unknown' => [
-        'not_labelled_heading' => 'Ta nasprotna stranka še ni označena',
-        'not_labelled_body' => 'Označevanje neznanih pomaga nadzorni plošči prikazati točne mesečne skupne zneske in verige financiranja.',
+        'not_labeled_heading' => 'Ta nasprotna stranka še ni označena',
+        'not_labeled_body' => 'Označevanje neznanih pomaga nadzorni plošči prikazati točne mesečne skupne zneske in verige financiranja.',
         'label_cta' => 'Označi to nasprotno stranko',
     ],
 

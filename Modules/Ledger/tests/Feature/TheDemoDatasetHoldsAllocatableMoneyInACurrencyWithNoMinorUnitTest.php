@@ -219,7 +219,7 @@ it('can fold its zero-decimal spend into the reader base currency the envelope g
     $user = demoPrimaryUser();
     $base = $baseCurrency->forUser($user);
 
-    $categorised = $db->connection()->table('transactions')
+    $categorized = $db->connection()->table('transactions')
         ->where('user_id', $user->id)
         ->where('source_format', 'demo')
         ->whereNotNull('category_id')
@@ -230,11 +230,11 @@ it('can fold its zero-decimal spend into the reader base currency the envelope g
         ->values()
         ->all();
 
-    $sorted = $categorised;
+    $sorted = $categorized;
     sort($sorted);
 
-    expect($categorised)->not->toBeEmpty();
-    expect($fx->ratesTo($categorised, $base)->codes())->toBe($sorted);
+    expect($categorized)->not->toBeEmpty();
+    expect($fx->ratesTo($categorized, $base)->codes())->toBe($sorted);
 });
 
 // The sum-to-parent rule is where a wrong scale shows first: a leg read at a

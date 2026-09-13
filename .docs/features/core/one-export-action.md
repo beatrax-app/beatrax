@@ -17,12 +17,12 @@ A `.zip` with two kinds of entry:
 | Entry | What it is |
 |---|---|
 | `beatrax-backup-<stamp>.sqlite.enc` | A `VACUUM INTO` snapshot of the database, with the encryption keyring packed into it, encrypted under the reader's passphrase. |
-| `artefacts/<location>/…` | Every file under each artefact directory, at its original relative path. |
+| `artifacts/<location>/…` | Every file under each artefact directory, at its original relative path. |
 
 The `<location>` segment is the key from `UserDataLocations`, so the three
 artefact trees stay apart inside the archive:
-`artefacts/artefacts_imports/`, `artefacts/artefacts_mail/`,
-`artefacts/artefacts_drop/`.
+`artifacts/artifacts_imports/`, `artifacts/artifacts_mail/`,
+`artifacts/artifacts_drop/`.
 
 The backup entry is written **first**, before any source document. That is what
 lets a restore find it at the head of the archive without walking one.

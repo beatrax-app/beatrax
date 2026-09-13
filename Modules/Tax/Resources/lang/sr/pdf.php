@@ -11,7 +11,7 @@ return [
     'total_income_label' => 'Ukupno prihoda:',
 
     'empty' => 'Za :year nema poreski označenih transakcija.',
-    'uncategorised' => 'Bez kategorije',
+    'uncategorized' => 'Bez kategorije',
 
     'col_date' => 'Datum',
     'col_counterparty' => 'Druga strana',

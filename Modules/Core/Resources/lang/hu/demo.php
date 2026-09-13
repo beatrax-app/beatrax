@@ -6,7 +6,7 @@ return [
     'goal_emergency_fund' => 'Vésztartalék',
     'goal_japan_trip' => 'Japán utazás',
     'goal_replace_laptop' => 'Laptopcsere',
-    'goal_winter_tyres' => 'Téli gumik',
+    'goal_winter_tires' => 'Téli gumik',
     'goal_ryokan_stay' => 'Ryokan-szállás',
     'goal_shinkansen_pass' => 'Shinkansen-bérlet',
     'pot_emergency_fund' => 'Vésztartalék',

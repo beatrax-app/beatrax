@@ -65,35 +65,35 @@ function bxDateTimeAccessibleName(string $html, string $display = ''): string
     $button = $xpath->query('//button')->item(0);
     expect($button)->toBeInstanceOf(DOMElement::class);
     /** @var DOMElement $button */
-    $normalise = static fn (string $raw): string => trim((string) preg_replace('/\s+/u', ' ', $raw));
+    $normalize = static fn (string $raw): string => trim((string) preg_replace('/\s+/u', ' ', $raw));
 
-    $labelledBy = trim($button->getAttribute('aria-labelledby'));
-    if ($labelledBy !== '') {
+    $labeledBy = trim($button->getAttribute('aria-labelledby'));
+    if ($labeledBy !== '') {
         $parts = [];
-        foreach (preg_split('/\s+/', $labelledBy) ?: [] as $reference) {
+        foreach (preg_split('/\s+/', $labeledBy) ?: [] as $reference) {
             $target = $xpath->query('//*[@id="'.$reference.'"]')->item(0);
             expect($target)->toBeInstanceOf(DOMElement::class);
             /** @var DOMElement $target */
             $parts[] = bxDateTimeNodeText($target, $display, true);
         }
 
-        return $normalise(implode(' ', $parts));
+        return $normalize(implode(' ', $parts));
     }
 
     $ariaLabel = trim($button->getAttribute('aria-label'));
     if ($ariaLabel !== '') {
-        return $normalise($ariaLabel);
+        return $normalize($ariaLabel);
     }
 
     $id = $button->getAttribute('id');
     if ($id !== '') {
         $label = $xpath->query('//label[@for="'.$id.'"]')->item(0);
         if ($label instanceof DOMElement) {
-            return $normalise(bxDateTimeNodeText($label, $display, true));
+            return $normalize(bxDateTimeNodeText($label, $display, true));
         }
     }
 
-    return $normalise(bxDateTimeNodeText($button, $display, true));
+    return $normalize(bxDateTimeNodeText($button, $display, true));
 }
 
 it('names an unlabelled date field with what it is and what it holds', function (): void {

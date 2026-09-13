@@ -94,9 +94,28 @@ final class StoredSentenceShape
     }
 
     /** @return string|null the first part of the literal that reads as authored prose */
+    /** @return string the value the literal denotes, not the source that spells it */
+    private static function decoded(string $literal): string
+    {
+        $quote = $literal[0] ?? '';
+        $body = trim($literal, "'\"");
+
+        return match ($quote) {
+            "'" => str_replace(["\\'", '\\\\'], ["'", '\\'], $body),
+            '"' => stripcslashes($body),
+            default => $body,
+        };
+    }
+
     public static function readsAsASentence(string $literal): ?string
     {
-        $text = trim(trim($literal), "'\"");
+        $text = self::decoded(trim($literal));
+
+        // A backslash SURVIVING the decode is a path, a regex or a format —
+        // never prose. Tested after the decode and not before it, because the
+        // escape an English sentence carries is its own apostrophe: every
+        // single-quoted `'Couldn\\'t …'` in the tree was discarded here
+        // unread, which is most of the copy this rule exists to find.
         if ($text === '' || str_contains($text, '\\')) {
             return null;
         }

@@ -113,5 +113,5 @@ it('MigrationArchiveCapability: a genuinely unreadable export still says so', fu
         ->set('sourceProduct', 'nynab')
         ->set('file', migrationUploadOf(MigrationFixturePaths::corruptZip(), 'nynab-export.zip'))
         ->call('submit')
-        ->assertSet('uploadError', Lang::get('migration::new.errors.unrecognised'));
+        ->assertSet('uploadError', Lang::get('migration::new.errors.unrecognized'));
 });

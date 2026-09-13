@@ -17,9 +17,9 @@ return [
 
     'location' => [
         'database' => 'Zbirka podatkov:',
-        'artefacts_imports' => 'Uvoženi izpiski:',
-        'artefacts_mail' => 'Prebrana pošta:',
-        'artefacts_drop' => 'Nadzorovana mapa:',
+        'artifacts_imports' => 'Uvoženi izpiski:',
+        'artifacts_mail' => 'Prebrana pošta:',
+        'artifacts_drop' => 'Nadzorovana mapa:',
         'backups' => 'Varnostne kopije:',
         'secrets' => 'Poverilnice povezav:',
         'logs' => 'Dnevniki:',
@@ -27,16 +27,16 @@ return [
 
     'copy_aria' => [
         'database' => 'Kopiraj pot do zbirke podatkov v odložišče',
-        'artefacts_imports' => 'Kopiraj pot do uvoženih izpiskov v odložišče',
-        'artefacts_mail' => 'Kopiraj pot do prebrane pošte v odložišče',
-        'artefacts_drop' => 'Kopiraj pot do nadzorovane mape v odložišče',
+        'artifacts_imports' => 'Kopiraj pot do uvoženih izpiskov v odložišče',
+        'artifacts_mail' => 'Kopiraj pot do prebrane pošte v odložišče',
+        'artifacts_drop' => 'Kopiraj pot do nadzorovane mape v odložišče',
         'backups' => 'Kopiraj pot do varnostnih kopij v odložišče',
         'secrets' => 'Kopiraj pot do poverilnic povezav v odložišče',
         'logs' => 'Kopiraj pot do dnevnikov v odložišče',
     ],
 
-    'artefacts_heading' => 'Tvoji izvorni dokumenti niso v varnostni kopiji',
-    'artefacts_body' => 'Varnostna kopija vsebuje zbirko podatkov in nič drugega. Izpiski, ki si jih uvozil, pošta, ki jo je potegnil bralnik, in računi, ki si jih odložil v nadzorovano mapo, ostanejo tam, kjer so, v treh zgoraj naštetih mapah. Če varnostno kopijo shraniš na varno, se ti ne prekopirajo, zato popoln arhiv pomeni, da vzameš s seboj tudi te mape — ali pa uporabiš spodnji Izvozi vse, ki jih zapakira skupaj z varnostno kopijo.',
+    'artifacts_heading' => 'Tvoji izvorni dokumenti niso v varnostni kopiji',
+    'artifacts_body' => 'Varnostna kopija vsebuje zbirko podatkov in nič drugega. Izpiski, ki si jih uvozil, pošta, ki jo je potegnil bralnik, in računi, ki si jih odložil v nadzorovano mapo, ostanejo tam, kjer so, v treh zgoraj naštetih mapah. Če varnostno kopijo shraniš na varno, se ti ne prekopirajo, zato popoln arhiv pomeni, da vzameš s seboj tudi te mape — ali pa uporabiš spodnji Izvozi vse, ki jih zapakira skupaj z varnostno kopijo.',
 
     'export_heading' => 'Izvozi vse',
     'export_body' => 'En sam arhiv s šifrirano kopijo tvoje zbirke podatkov in vsakim izvornim dokumentom, ki si ga dal Beatraxu. Razpakiraj ga kamor koli in dokumenti bodo notri takšni, kot so bili od nekdaj, v mapah, iz katerih so prišli.',

@@ -67,8 +67,8 @@ return [
     ],
 
     'unknown' => [
-        'not_labelled_heading' => 'Sellel vastaspoolel pole veel silti',
-        'not_labelled_body' => 'Tundmatute sildistamine aitab ülevaates näidata täpseid kuusummasid ja rahastusahelaid.',
+        'not_labeled_heading' => 'Sellel vastaspoolel pole veel silti',
+        'not_labeled_body' => 'Tundmatute sildistamine aitab ülevaates näidata täpseid kuusummasid ja rahastusahelaid.',
         'label_cta' => 'Määra sellele vastaspoolele silt',
     ],
 

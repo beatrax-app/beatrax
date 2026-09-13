@@ -237,7 +237,7 @@ final readonly class IcsReceiptMatcher implements SenderMatcher
             return MatchOutcomeDto::unmatched(self::EURO_LEG_UNSTATED_REASON);
         }
 
-        $bookedAt = SafeDate::normalisedDayOrNull($parsed->headers['date'] ?? '');
+        $bookedAt = SafeDate::normalizedDayOrNull($parsed->headers['date'] ?? '');
         if ($bookedAt === null) {
             return MatchOutcomeDto::unmatched('invalid_date_header');
         }

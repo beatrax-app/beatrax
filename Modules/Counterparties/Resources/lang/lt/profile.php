@@ -67,8 +67,8 @@ return [
     ],
 
     'unknown' => [
-        'not_labelled_heading' => 'Ši kita šalis dar nepažymėta',
-        'not_labelled_body' => 'Nežinomų šalių pažymėjimas padeda apžvalgoje rodyti tikslias mėnesio sumas ir finansavimo grandines.',
+        'not_labeled_heading' => 'Ši kita šalis dar nepažymėta',
+        'not_labeled_body' => 'Nežinomų šalių pažymėjimas padeda apžvalgoje rodyti tikslias mėnesio sumas ir finansavimo grandines.',
         'label_cta' => 'Pažymėti šią kitą šalį',
     ],
 

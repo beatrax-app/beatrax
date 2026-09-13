@@ -11,7 +11,7 @@ return [
     'total_income_label' => 'Suma przychodów:',
 
     'empty' => 'Brak transakcji oznaczonych podatkowo dla roku :year.',
-    'uncategorised' => 'Bez kategorii',
+    'uncategorized' => 'Bez kategorii',
 
     'col_date' => 'Data',
     'col_counterparty' => 'Kontrahent',

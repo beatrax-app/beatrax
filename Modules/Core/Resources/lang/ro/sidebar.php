@@ -12,7 +12,7 @@ return [
     'section_planning' => 'PLANIFICARE',
     'section_insights' => 'ANALIZE',
     'section_ingestion' => 'DATE INTRATE',
-    'section_organise' => 'ORGANIZARE',
+    'section_organize' => 'ORGANIZARE',
     'section_settings' => 'SETĂRI',
 
     'nav' => [

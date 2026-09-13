@@ -12,7 +12,7 @@ return [
     'section_planning' => 'PLANAVIMAS',
     'section_insights' => 'ĮŽVALGOS',
     'section_ingestion' => 'DUOMENŲ ĮVESTIS',
-    'section_organise' => 'TVARKYMAS',
+    'section_organize' => 'TVARKYMAS',
     'section_settings' => 'NUSTATYMAI',
 
     'nav' => [

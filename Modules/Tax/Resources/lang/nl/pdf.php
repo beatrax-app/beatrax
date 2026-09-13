@@ -11,7 +11,7 @@ return [
     'total_income_label' => 'Totale inkomsten:',
 
     'empty' => 'Geen belastinggetagde transacties voor :year.',
-    'uncategorised' => 'Ongecategoriseerd',
+    'uncategorized' => 'Ongecategoriseerd',
 
     'col_date' => 'Datum',
     'col_counterparty' => 'Tegenpartij',

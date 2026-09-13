@@ -66,8 +66,8 @@ return [
     ],
 
     'unknown' => [
-        'not_labelled_heading' => 'Deze tegenpartij is nog niet gelabeld',
-        'not_labelled_body' => 'Onbekenden labelen helpt het dashboard nauwkeurige maandtotalen en financieringsketens te tonen.',
+        'not_labeled_heading' => 'Deze tegenpartij is nog niet gelabeld',
+        'not_labeled_body' => 'Onbekenden labelen helpt het dashboard nauwkeurige maandtotalen en financieringsketens te tonen.',
         'label_cta' => 'Deze tegenpartij labelen',
     ],
 

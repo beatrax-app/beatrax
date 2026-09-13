@@ -46,7 +46,7 @@ final readonly class TransactionSeriesMembershipQuery
      */
     public function seriesMembershipForTransactionIds(array $transactionIds, User $user): array
     {
-        $unique = SeriesIds::normalise($transactionIds);
+        $unique = SeriesIds::normalize($transactionIds);
         if ($unique === []) {
             return [];
         }
@@ -79,7 +79,7 @@ final readonly class TransactionSeriesMembershipQuery
      */
     public function seriesIdsForTransactionIds(array $transactionIds, User $user): array
     {
-        $unique = SeriesIds::normalise($transactionIds);
+        $unique = SeriesIds::normalize($transactionIds);
         if ($unique === []) {
             return [];
         }

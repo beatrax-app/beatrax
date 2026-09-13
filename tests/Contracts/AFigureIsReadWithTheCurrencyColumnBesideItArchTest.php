@@ -73,6 +73,21 @@ function figureCurrencyPairs(): array
     return $pairs;
 }
 
+/**
+ * @return string the file's code with its comments removed, so neither the read
+ *                nor the currency beside it can be satisfied by prose
+ */
+function figureCurrencyCodeOf(string $path): string
+{
+    $code = '';
+
+    foreach (BackendSourceFiles::codeTokens($path) as $token) {
+        $code .= is_array($token) ? $token[1] : $token;
+    }
+
+    return $code;
+}
+
 it('declares at least one table that names the currency of a stored figure', function (): void {
     // Without this the rule below passes by describing nothing, which is how a
     // guard keyed on a schema shape goes quiet when the shape is renamed.
@@ -85,7 +100,11 @@ it('reads no such figure without the currency column beside it', function (): vo
 
     foreach (BackendSourceFiles::all() as $path) {
         $relative = str_replace(base_path().'/', '', $path);
-        $source = (string) file_get_contents($path);
+
+        // Code only. Both halves used to read the raw file, so one mention of
+        // the currency column in a COMMENT cleared the file for good — the
+        // figure went on being read without it and this reported nothing.
+        $source = figureCurrencyCodeOf($path);
 
         foreach ($pairs as $pair) {
             $reads = $pair['qualifiedOnly']

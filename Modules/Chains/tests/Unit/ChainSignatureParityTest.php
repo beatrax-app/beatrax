@@ -31,5 +31,5 @@ it('composes the chain signature hash identically in the resolver and the sweep'
     $sweep = chainSignatureExpression('Modules/Ledger/Public/Services/CounterpartyKeyBackfill.php');
 
     expect($resolver)->toContain("hash('sha256'");
-    expect($sweep)->toBe(str_replace('$normalisedMerchant', '$matchingKey', $resolver));
+    expect($sweep)->toBe(str_replace('$normalizedMerchant', '$matchingKey', $resolver));
 });

@@ -334,10 +334,10 @@ abstract class AbstractYnabParser implements ParsesMigrationSource
 
     private function naturalCategoryKey(?string $group, string $name): string
     {
-        $normalisedGroup = $group !== null ? mb_strtolower(trim($group)) : '';
-        $normalisedName = mb_strtolower(trim($name));
+        $normalizedGroup = $group !== null ? mb_strtolower(trim($group)) : '';
+        $normalizedName = mb_strtolower(trim($name));
 
-        return 'cat:'.$normalisedGroup.'/'.$normalisedName;
+        return 'cat:'.$normalizedGroup.'/'.$normalizedName;
     }
 
     /**

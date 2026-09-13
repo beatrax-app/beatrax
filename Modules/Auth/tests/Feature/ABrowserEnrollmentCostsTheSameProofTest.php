@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Session\Session;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
-use Modules\Auth\Internal\Lock\BrowserEnrolmentAuthoriser;
+use Modules\Auth\Internal\Lock\BrowserEnrollmentAuthorizer;
 use Modules\Auth\Internal\Lock\FreshPinProof;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
@@ -72,7 +72,7 @@ it('mints no proof for a wrong PIN', function (): void {
     /** @var Session $session */
     $session = app(Session::class);
 
-    expect(app(BrowserEnrolmentAuthoriser::class)->authorise((int) $user->id, '999999', $session))->toBeFalse()
+    expect(app(BrowserEnrollmentAuthorizer::class)->authorize((int) $user->id, '999999', $session))->toBeFalse()
         ->and(app(FreshPinProof::class)->consume($session, (int) $user->id))->toBeFalse();
 });
 
@@ -81,7 +81,7 @@ it('mints no proof for an empty box', function (): void {
     /** @var Session $session */
     $session = app(Session::class);
 
-    expect(app(BrowserEnrolmentAuthoriser::class)->authorise((int) $user->id, '', $session))->toBeFalse()
+    expect(app(BrowserEnrollmentAuthorizer::class)->authorize((int) $user->id, '', $session))->toBeFalse()
         ->and(app(FreshPinProof::class)->consume($session, (int) $user->id))->toBeFalse();
 });
 
@@ -90,7 +90,7 @@ it('mints a proof the right PIN can spend exactly once', function (): void {
     /** @var Session $session */
     $session = app(Session::class);
 
-    expect(app(BrowserEnrolmentAuthoriser::class)->authorise((int) $user->id, '123456', $session))->toBeTrue();
+    expect(app(BrowserEnrollmentAuthorizer::class)->authorize((int) $user->id, '123456', $session))->toBeTrue();
 
     $proof = app(FreshPinProof::class);
 
@@ -103,7 +103,7 @@ it('will not let one account spend the proof another typed for', function (): vo
     /** @var Session $session */
     $session = app(Session::class);
 
-    app(BrowserEnrolmentAuthoriser::class)->authorise((int) $owner->id, '123456', $session);
+    app(BrowserEnrollmentAuthorizer::class)->authorize((int) $owner->id, '123456', $session);
 
     $proof = app(FreshPinProof::class);
 
@@ -118,7 +118,7 @@ it('will not let a proof outlive the ceremony it was typed for', function (): vo
     /** @var Session $session */
     $session = app(Session::class);
 
-    app(BrowserEnrolmentAuthoriser::class)->authorise((int) $user->id, '123456', $session);
+    app(BrowserEnrollmentAuthorizer::class)->authorize((int) $user->id, '123456', $session);
 
     $clock = Mockery::mock(Clock::class);
     $clock->shouldReceive('now')->andReturn(CarbonImmutable::now()->addSeconds(FreshPinProof::LIFETIME_SECONDS + 1));
@@ -131,7 +131,7 @@ it('leaves no copy of the data key behind for the ceremony to pick up', function
     /** @var Session $session */
     $session = app(Session::class);
 
-    app(BrowserEnrolmentAuthoriser::class)->authorise((int) $user->id, '123456', $session);
+    app(BrowserEnrollmentAuthorizer::class)->authorize((int) $user->id, '123456', $session);
 
     // The wrap happens a round trip later and reads the key from the custodian
     // at that moment, so what waits in the session is a claim and not a secret:

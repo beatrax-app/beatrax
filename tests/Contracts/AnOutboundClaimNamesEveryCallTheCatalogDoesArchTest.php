@@ -34,7 +34,7 @@ function outboundReaderWords(): array
 }
 
 /** @return list<string> every call named in the runbook's outbound-call catalogue, in table order */
-function outboundCatalogueRows(): array
+function outboundCatalogRows(): array
 {
     $page = (string) file_get_contents(base_path('.docs/runbooks/store-submission.md'));
 
@@ -67,11 +67,11 @@ function outboundReaderSentence(): string
 }
 
 it('reads a catalogue with rows in it', function (): void {
-    expect(outboundCatalogueRows())->toHaveCount(7);
+    expect(outboundCatalogRows())->toHaveCount(7);
 });
 
 it('has a reader word for every call the catalogue carries, and carries every call it has a word for', function (): void {
-    expect(outboundCatalogueRows())->toBe(array_keys(outboundReaderWords()));
+    expect(outboundCatalogRows())->toBe(array_keys(outboundReaderWords()));
 });
 
 it('names every outbound call on the screen that tells a reader what leaves the device', function (): void {

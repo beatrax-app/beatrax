@@ -12,7 +12,7 @@ return [
     'section_planning' => 'ПЛАНУВАННЯ',
     'section_insights' => 'АНАЛІТИКА',
     'section_ingestion' => 'НАДХОДЖЕННЯ ДАНИХ',
-    'section_organise' => 'ВПОРЯДКУВАННЯ',
+    'section_organize' => 'ВПОРЯДКУВАННЯ',
     'section_settings' => 'НАЛАШТУВАННЯ',
 
     'nav' => [

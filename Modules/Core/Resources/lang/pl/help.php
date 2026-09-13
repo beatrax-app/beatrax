@@ -17,9 +17,9 @@ return [
 
     'location' => [
         'database' => 'Baza danych:',
-        'artefacts_imports' => 'Zaimportowane wyciągi:',
-        'artefacts_mail' => 'Zeskanowana poczta:',
-        'artefacts_drop' => 'Obserwowany katalog:',
+        'artifacts_imports' => 'Zaimportowane wyciągi:',
+        'artifacts_mail' => 'Zeskanowana poczta:',
+        'artifacts_drop' => 'Obserwowany katalog:',
         'backups' => 'Kopie zapasowe:',
         'secrets' => 'Dane logowania połączeń:',
         'logs' => 'Dzienniki:',
@@ -27,16 +27,16 @@ return [
 
     'copy_aria' => [
         'database' => 'Kopiuj ścieżkę bazy danych do schowka',
-        'artefacts_imports' => 'Kopiuj ścieżkę zaimportowanych wyciągów do schowka',
-        'artefacts_mail' => 'Kopiuj ścieżkę zeskanowanej poczty do schowka',
-        'artefacts_drop' => 'Kopiuj ścieżkę obserwowanego katalogu do schowka',
+        'artifacts_imports' => 'Kopiuj ścieżkę zaimportowanych wyciągów do schowka',
+        'artifacts_mail' => 'Kopiuj ścieżkę zeskanowanej poczty do schowka',
+        'artifacts_drop' => 'Kopiuj ścieżkę obserwowanego katalogu do schowka',
         'backups' => 'Kopiuj ścieżkę kopii zapasowych do schowka',
         'secrets' => 'Kopiuj ścieżkę danych logowania połączeń do schowka',
         'logs' => 'Kopiuj ścieżkę dzienników do schowka',
     ],
 
-    'artefacts_heading' => 'Twoje dokumenty źródłowe nie znajdują się w kopii zapasowej',
-    'artefacts_body' => 'Kopia zapasowa zawiera bazę danych i nic poza tym. Wyciągi, które zaimportowałeś, poczta pobrana przez skaner i paragony wrzucone do obserwowanego katalogu zostają tam, gdzie są — w trzech katalogach wymienionych powyżej. Odłożenie kopii zapasowej w bezpieczne miejsce ich nie kopiuje, więc pełne archiwum oznacza zabranie także tych katalogów — albo skorzystanie z opcji Wyeksportuj wszystko poniżej, która pakuje je razem z kopią zapasową.',
+    'artifacts_heading' => 'Twoje dokumenty źródłowe nie znajdują się w kopii zapasowej',
+    'artifacts_body' => 'Kopia zapasowa zawiera bazę danych i nic poza tym. Wyciągi, które zaimportowałeś, poczta pobrana przez skaner i paragony wrzucone do obserwowanego katalogu zostają tam, gdzie są — w trzech katalogach wymienionych powyżej. Odłożenie kopii zapasowej w bezpieczne miejsce ich nie kopiuje, więc pełne archiwum oznacza zabranie także tych katalogów — albo skorzystanie z opcji Wyeksportuj wszystko poniżej, która pakuje je razem z kopią zapasową.',
 
     'export_heading' => 'Wyeksportuj wszystko',
     'export_body' => 'Jedno archiwum z zaszyfrowaną kopią Twojej bazy danych i każdym dokumentem źródłowym, jaki przekazałeś Beatraxowi. Rozpakuj je gdziekolwiek, a dokumenty będą w środku takie, jakie zawsze były, w katalogach, z których pochodzą.',

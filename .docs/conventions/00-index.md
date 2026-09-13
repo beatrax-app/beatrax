@@ -142,6 +142,10 @@ pass for a clean one.
   supplies a URL this codebase did not write, why `target="_blank"` here opens
   another window of the application rather than a browser tab, the six refusals
   in the order they are asked, and the two sites that deliberately admit `http://`
+- [One dialect for identifiers](one-dialect-for-identifiers.md) — why a name the
+  machine resolves is American and the English a reader is shown is British, the
+  three kinds of persisted name a spelling is never worth renaming, and why the
+  spell-checker's locale cannot express the split
 - [A check another writer can invalidate](a-check-another-writer-can-invalidate.md)
   — why a read-then-insert is a statement about the past, what the connection's
   `IMMEDIATE` transaction mode already gives you, and which of the three fixes

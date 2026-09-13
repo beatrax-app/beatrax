@@ -20,11 +20,11 @@ it('spells the three OAuth kinds the way the rows on disk do', function (): void
 });
 
 it('offers re-authorisation only for the kinds a reader can clear that way', function (): void {
-    expect(OAuthAlertKind::promptsReauthorisation('oauth_reconsent_required'))->toBeTrue()
-        ->and(OAuthAlertKind::promptsReauthorisation('oauth.reauth_required'))->toBeTrue()
-        ->and(OAuthAlertKind::promptsReauthorisation('oauth_scrub_set_failed'))->toBeFalse()
-        ->and(OAuthAlertKind::promptsReauthorisation('oauth_reauth_required'))->toBeFalse()
-        ->and(OAuthAlertKind::promptsReauthorisation('backup_overdue'))->toBeFalse();
+    expect(OAuthAlertKind::promptsReauthorization('oauth_reconsent_required'))->toBeTrue()
+        ->and(OAuthAlertKind::promptsReauthorization('oauth.reauth_required'))->toBeTrue()
+        ->and(OAuthAlertKind::promptsReauthorization('oauth_scrub_set_failed'))->toBeFalse()
+        ->and(OAuthAlertKind::promptsReauthorization('oauth_reauth_required'))->toBeFalse()
+        ->and(OAuthAlertKind::promptsReauthorization('backup_overdue'))->toBeFalse();
 });
 
 // An unknown kind falls through to the row's own `message` column, so a

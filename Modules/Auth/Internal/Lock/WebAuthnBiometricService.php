@@ -253,7 +253,7 @@ final readonly class WebAuthnBiometricService
         // lock.js sends rawId as unpadded base64url and the store keeps
         // standard base64, so without normalising here the catch below never
         // finds the row and the failure throttle never engages.
-        $fallbackCredentialId = $this->normaliseAssertionRawId($assertion['rawId'] ?? null);
+        $fallbackCredentialId = $this->normalizeAssertionRawId($assertion['rawId'] ?? null);
 
         try {
             return $this->assertAndRelease($userId, $assertion, $challenge, $session);
@@ -402,7 +402,7 @@ final readonly class WebAuthnBiometricService
         return $this->extractDataKey($this->shield->reveal($storedBlob));
     }
 
-    private function normaliseAssertionRawId(mixed $rawIdValue): string
+    private function normalizeAssertionRawId(mixed $rawIdValue): string
     {
         if (! is_string($rawIdValue) || $rawIdValue === '') {
             return '';

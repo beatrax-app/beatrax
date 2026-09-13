@@ -17,9 +17,9 @@ return [
 
     'location' => [
         'database' => 'Adatbázis:',
-        'artefacts_imports' => 'Importált kivonatok:',
-        'artefacts_mail' => 'Beolvasott levelek:',
-        'artefacts_drop' => 'Figyelt mappa:',
+        'artifacts_imports' => 'Importált kivonatok:',
+        'artifacts_mail' => 'Beolvasott levelek:',
+        'artifacts_drop' => 'Figyelt mappa:',
         'backups' => 'Biztonsági mentések:',
         'secrets' => 'Kapcsolatok hitelesítő adatai:',
         'logs' => 'Naplók:',
@@ -27,16 +27,16 @@ return [
 
     'copy_aria' => [
         'database' => 'Az adatbázis elérési útjának másolása a vágólapra',
-        'artefacts_imports' => 'Az importált kivonatok elérési útjának másolása a vágólapra',
-        'artefacts_mail' => 'A beolvasott levelek elérési útjának másolása a vágólapra',
-        'artefacts_drop' => 'A figyelt mappa elérési útjának másolása a vágólapra',
+        'artifacts_imports' => 'Az importált kivonatok elérési útjának másolása a vágólapra',
+        'artifacts_mail' => 'A beolvasott levelek elérési útjának másolása a vágólapra',
+        'artifacts_drop' => 'A figyelt mappa elérési útjának másolása a vágólapra',
         'backups' => 'A biztonsági mentések elérési útjának másolása a vágólapra',
         'secrets' => 'A kapcsolatok hitelesítő adatai elérési útjának másolása a vágólapra',
         'logs' => 'A naplók elérési útjának másolása a vágólapra',
     ],
 
-    'artefacts_heading' => 'A forrásdokumentumaid nincsenek benne a biztonsági mentésben',
-    'artefacts_body' => 'A biztonsági mentés az adatbázist tartalmazza, mást semmit. Az általad importált kivonatok, a beolvasó által behúzott levelek és a figyelt mappába ejtett bizonylatok ott maradnak, ahol vannak: a fenti három mappában. Ha a mentést biztonságos helyre teszed, ezek nem másolódnak vele, így a teljes archívumhoz ezeket a mappákat is vinned kell — vagy használd lent a Minden exportálása lehetőséget, amely a mentéssel együtt becsomagolja őket.',
+    'artifacts_heading' => 'A forrásdokumentumaid nincsenek benne a biztonsági mentésben',
+    'artifacts_body' => 'A biztonsági mentés az adatbázist tartalmazza, mást semmit. Az általad importált kivonatok, a beolvasó által behúzott levelek és a figyelt mappába ejtett bizonylatok ott maradnak, ahol vannak: a fenti három mappában. Ha a mentést biztonságos helyre teszed, ezek nem másolódnak vele, így a teljes archívumhoz ezeket a mappákat is vinned kell — vagy használd lent a Minden exportálása lehetőséget, amely a mentéssel együtt becsomagolja őket.',
 
     'export_heading' => 'Minden exportálása',
     'export_body' => 'Egyetlen archívum, benne az adatbázisod titkosított másolata és minden forrásdokumentum, amit a Beatraxnak adtál. Csomagold ki bárhol, és a dokumentumaid úgy vannak benne, ahogy mindig is voltak, abban a mappában, ahonnan jöttek.',

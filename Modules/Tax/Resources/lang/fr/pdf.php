@@ -11,7 +11,7 @@ return [
     'total_income_label' => 'Total des revenus :',
 
     'empty' => 'Aucune transaction marquée fiscalement pour :year.',
-    'uncategorised' => 'Non catégorisé',
+    'uncategorized' => 'Non catégorisé',
 
     'col_date' => 'Date',
     'col_counterparty' => 'Tiers',

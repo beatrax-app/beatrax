@@ -61,7 +61,7 @@ function exportArchiveEntries(string $zipPath): array
     return $names;
 }
 
-function plantExportArtefact(string $relative, string $contents): string
+function plantExportArtifact(string $relative, string $contents): string
 {
     $path = UserDataPathService::appPath($relative);
     @mkdir(dirname($path), 0o700, true);
@@ -71,9 +71,9 @@ function plantExportArtefact(string $relative, string $contents): string
 }
 
 it('bundles the encrypted database and every artefact directory into one archive', function (): void {
-    plantExportArtefact('private/imports/1/statement-march.csv', "date,amount\n2026-03-01,-12.50\n");
-    plantExportArtefact('inbox/1/7/2026/09/a-receipt.eml', "Subject: Your receipt\r\n\r\nThanks.\r\n");
-    plantExportArtefact('inbox-drop/1/dropped-invoice.pdf', '%PDF-1.4 fixture');
+    plantExportArtifact('private/imports/1/statement-march.csv', "date,amount\n2026-03-01,-12.50\n");
+    plantExportArtifact('inbox/1/7/2026/09/a-receipt.eml', "Subject: Your receipt\r\n\r\nThanks.\r\n");
+    plantExportArtifact('inbox-drop/1/dropped-invoice.pdf', '%PDF-1.4 fixture');
 
     /** @var ExportEverythingArchive $archive */
     $archive = $this->app->make(ExportEverythingArchive::class);
@@ -89,16 +89,16 @@ it('bundles the encrypted database and every artefact directory into one archive
     // check below.
     expect($entries)->toHaveCount(4)
         ->and($entries)->toContain('beatrax-backup-2026-09-04-120000.sqlite.enc')
-        ->and($entries)->toContain('artefacts/'.UserDataLocations::ARTEFACTS_IMPORTS.'/1/statement-march.csv')
-        ->and($entries)->toContain('artefacts/'.UserDataLocations::ARTEFACTS_MAIL.'/1/7/2026/09/a-receipt.eml')
-        ->and($entries)->toContain('artefacts/'.UserDataLocations::ARTEFACTS_DROP.'/1/dropped-invoice.pdf');
+        ->and($entries)->toContain('artifacts/'.UserDataLocations::ARTIFACTS_IMPORTS.'/1/statement-march.csv')
+        ->and($entries)->toContain('artifacts/'.UserDataLocations::ARTIFACTS_MAIL.'/1/7/2026/09/a-receipt.eml')
+        ->and($entries)->toContain('artifacts/'.UserDataLocations::ARTIFACTS_DROP.'/1/dropped-invoice.pdf');
 
     @unlink($zipPath);
 });
 
 it('hands back the reader their own documents, byte for byte', function (): void {
     $statement = "date,amount\n2026-03-01,-12.50\n";
-    plantExportArtefact('private/imports/1/statement-march.csv', $statement);
+    plantExportArtifact('private/imports/1/statement-march.csv', $statement);
 
     /** @var ExportEverythingArchive $archive */
     $archive = $this->app->make(ExportEverythingArchive::class);
@@ -106,7 +106,7 @@ it('hands back the reader their own documents, byte for byte', function (): void
 
     $zip = new ZipArchive;
     expect($zip->open($zipPath))->toBeTrue();
-    $extracted = $zip->getFromName('artefacts/'.UserDataLocations::ARTEFACTS_IMPORTS.'/1/statement-march.csv');
+    $extracted = $zip->getFromName('artifacts/'.UserDataLocations::ARTIFACTS_IMPORTS.'/1/statement-march.csv');
     $zip->close();
 
     expect($extracted)->toBe($statement);
@@ -162,8 +162,8 @@ it('exports for a reader who has imported nothing at all', function (): void {
 // native writer there and nowhere else. Building with the answer a phone gives
 // is the only way that branch is reached on a machine that has the extension.
 it('builds the same archive on a build without ext-zip', function (): void {
-    plantExportArtefact('private/imports/1/statement-march.csv', "date,amount\n2026-03-01,-12.50\n");
-    plantExportArtefact('inbox/1/7/2026/09/a-receipt.eml', "Subject: Your receipt\r\n\r\nThanks.\r\n");
+    plantExportArtifact('private/imports/1/statement-march.csv', "date,amount\n2026-03-01,-12.50\n");
+    plantExportArtifact('inbox/1/7/2026/09/a-receipt.eml', "Subject: Your receipt\r\n\r\nThanks.\r\n");
 
     $archive = new ExportEverythingArchive(
         $this->app->make(DatabaseManager::class),
@@ -179,12 +179,12 @@ it('builds the same archive on a build without ext-zip', function (): void {
 
     expect($entries)->toHaveCount(3)
         ->and($entries)->toContain('beatrax-backup-2026-09-04-120000.sqlite.enc')
-        ->and($entries)->toContain('artefacts/'.UserDataLocations::ARTEFACTS_IMPORTS.'/1/statement-march.csv')
-        ->and($entries)->toContain('artefacts/'.UserDataLocations::ARTEFACTS_MAIL.'/1/7/2026/09/a-receipt.eml');
+        ->and($entries)->toContain('artifacts/'.UserDataLocations::ARTIFACTS_IMPORTS.'/1/statement-march.csv')
+        ->and($entries)->toContain('artifacts/'.UserDataLocations::ARTIFACTS_MAIL.'/1/7/2026/09/a-receipt.eml');
 
     $zip = new ZipArchive;
     expect($zip->open($zipPath))->toBeTrue();
-    $extracted = $zip->getFromName('artefacts/'.UserDataLocations::ARTEFACTS_IMPORTS.'/1/statement-march.csv');
+    $extracted = $zip->getFromName('artifacts/'.UserDataLocations::ARTIFACTS_IMPORTS.'/1/statement-march.csv');
     $zip->close();
 
     expect($extracted)->toBe("date,amount\n2026-03-01,-12.50\n");
@@ -196,8 +196,8 @@ it('builds the same archive on a build without ext-zip', function (): void {
 // put there. Following one would put whatever it points at inside an archive
 // the reader is about to hand somebody.
 it('does not follow a symlink out of an artefact directory', function (): void {
-    $real = plantExportArtefact('private/imports/1/statement-march.csv', "date,amount\n2026-03-01,-12.50\n");
-    $secret = plantExportArtefact('secrets/provider-token.txt', 'a-token-nobody-asked-to-export');
+    $real = plantExportArtifact('private/imports/1/statement-march.csv', "date,amount\n2026-03-01,-12.50\n");
+    $secret = plantExportArtifact('secrets/provider-token.txt', 'a-token-nobody-asked-to-export');
     symlink($secret, UserDataPathService::appPath('private/imports/1/escape.txt'));
 
     /** @var ExportEverythingArchive $archive */
@@ -207,8 +207,8 @@ it('does not follow a symlink out of an artefact directory', function (): void {
     $entries = exportArchiveEntries($zipPath);
 
     expect($entries)->toHaveCount(2)
-        ->and($entries)->toContain('artefacts/'.UserDataLocations::ARTEFACTS_IMPORTS.'/1/statement-march.csv')
-        ->and($entries)->not->toContain('artefacts/'.UserDataLocations::ARTEFACTS_IMPORTS.'/1/escape.txt')
+        ->and($entries)->toContain('artifacts/'.UserDataLocations::ARTIFACTS_IMPORTS.'/1/statement-march.csv')
+        ->and($entries)->not->toContain('artifacts/'.UserDataLocations::ARTIFACTS_IMPORTS.'/1/escape.txt')
         ->and(is_file($real))->toBeTrue();
 
     @unlink($zipPath);
@@ -220,7 +220,7 @@ it('does not follow a symlink out of an artefact directory', function (): void {
 // credentials sit one directory from the source documents, so "everything under
 // the storage root" is the sweep that must never be written.
 it('leaves every location withheld from the export out of the archive', function (): void {
-    plantExportArtefact('private/imports/1/statement-march.csv', "date,amount\n2026-03-01,-12.50\n");
+    plantExportArtifact('private/imports/1/statement-march.csv', "date,amount\n2026-03-01,-12.50\n");
 
     $planted = [
         'secrets/open-banking.json' => '{"client_secret":"a-connector-credential"}',
@@ -229,7 +229,7 @@ it('leaves every location withheld from the export out of the archive', function
         'sync/gdk/1.enc' => 'the keyring that opens the sealed columns',
     ];
     foreach ($planted as $relative => $contents) {
-        plantExportArtefact($relative, $contents);
+        plantExportArtifact($relative, $contents);
     }
 
     /** @var ExportEverythingArchive $archive */
@@ -241,7 +241,7 @@ it('leaves every location withheld from the export out of the archive', function
     // The one entry that must be there, asserted first: every "is not in the
     // archive" claim below is true of an archive that was never built.
     expect($entries)->toHaveCount(2)
-        ->and($entries)->toContain('artefacts/'.UserDataLocations::ARTEFACTS_IMPORTS.'/1/statement-march.csv');
+        ->and($entries)->toContain('artifacts/'.UserDataLocations::ARTIFACTS_IMPORTS.'/1/statement-march.csv');
 
     $joined = implode("\n", $entries);
     foreach (array_keys($planted) as $relative) {
@@ -263,7 +263,7 @@ it('leaves every location withheld from the export out of the archive', function
 // out by whichever branch happened to reach it first.
 it('classifies every location in the inventory as carried or withheld', function (): void {
     $all = array_keys(UserDataLocations::all());
-    $carried = array_keys(UserDataLocations::artefacts());
+    $carried = array_keys(UserDataLocations::artifacts());
     $withheld = array_keys(UserDataLocations::withheldFromExport());
 
     sort($all);
@@ -277,6 +277,6 @@ it('classifies every location in the inventory as carried or withheld', function
 it('withholds the connector credentials directory by name, not by accident', function (): void {
     expect(UserDataLocations::withheldFromExport())
         ->toHaveKey(UserDataLocations::SECRETS)
-        ->and(UserDataLocations::artefacts())
+        ->and(UserDataLocations::artifacts())
         ->not->toHaveKey(UserDataLocations::SECRETS);
 });

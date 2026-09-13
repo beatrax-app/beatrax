@@ -76,7 +76,7 @@ it('parses the redacted .txt fixture into the expected SourceTransactionDto stre
         expect($dto)->toBeInstanceOf(SourceTransactionDto::class);
     }
 
-    $serialised = array_map(
+    $serialized = array_map(
         static fn (SourceTransactionDto $dto): array => [
             'sourceRowIndex' => $dto->sourceRowIndex,
             'bookedAt' => $dto->bookedAt->toDateString(),
@@ -91,7 +91,7 @@ it('parses the redacted .txt fixture into the expected SourceTransactionDto stre
         $dtos,
     );
 
-    expect($serialised)->toMatchSnapshot();
+    expect($serialized)->toMatchSnapshot();
 })->group('phase-3');
 
 it('preserves the per-transaction extracted-text block in rawPayload under the ics-pdf format discriminator', function (): void {

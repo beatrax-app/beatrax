@@ -6,7 +6,7 @@ return [
     'goal_emergency_fund' => 'Sklad za nujne primere',
     'goal_japan_trip' => 'Potovanje na Japonsko',
     'goal_replace_laptop' => 'Zamenjava prenosnika',
-    'goal_winter_tyres' => 'Zimske gume',
+    'goal_winter_tires' => 'Zimske gume',
     'goal_ryokan_stay' => 'Bivanje v ryokanu',
     'goal_shinkansen_pass' => 'Vozovnica za shinkansen',
     'pot_emergency_fund' => 'Sklad za nujne primere',

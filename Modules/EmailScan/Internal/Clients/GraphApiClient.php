@@ -415,7 +415,7 @@ final readonly class GraphApiClient implements GraphApiClientContract
             foreach ($raw as $k => $v) {
                 $narrowed[(string) $k] = $v;
             }
-            $messages[] = $this->normaliseMessageMeta($narrowed);
+            $messages[] = $this->normalizeMessageMeta($narrowed);
         }
 
         return $messages;
@@ -427,7 +427,7 @@ final readonly class GraphApiClient implements GraphApiClientContract
      * @param  array<string, mixed>  $raw
      * @return array<string, mixed>
      */
-    private function normaliseMessageMeta(array $raw): array
+    private function normalizeMessageMeta(array $raw): array
     {
         $from = $raw['from'] ?? [];
         $emailAddress = is_array($from) && isset($from['emailAddress']) && is_array($from['emailAddress'])

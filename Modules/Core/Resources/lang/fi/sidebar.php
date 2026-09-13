@@ -12,7 +12,7 @@ return [
     'section_planning' => 'SUUNNITTELU',
     'section_insights' => 'HAVAINNOT',
     'section_ingestion' => 'TIEDOT SISÄÄN',
-    'section_organise' => 'JÄRJESTELY',
+    'section_organize' => 'JÄRJESTELY',
     'section_settings' => 'ASETUKSET',
 
     'nav' => [

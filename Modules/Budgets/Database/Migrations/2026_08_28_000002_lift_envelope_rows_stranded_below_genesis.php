@@ -168,7 +168,7 @@ return new class extends ModuleMigration
 
     // EnvelopeWriter stamps the reader's base currency at write time, so two
     // months either side of a currency change hold different codes and adding
-    // their minor units invents the difference. EnvelopePeriodRekeyer::totalled()
+    // their minor units invents the difference. EnvelopePeriodRekeyer::totaled()
     // merges the same pair by the same rule, and this is the same merge.
     /**
      * @return array{assigned_minor: int, currency: string}

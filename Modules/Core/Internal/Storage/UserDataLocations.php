@@ -13,11 +13,11 @@ final class UserDataLocations
 {
     public const string DATABASE = 'database';
 
-    public const string ARTEFACTS_IMPORTS = 'artefacts_imports';
+    public const string ARTIFACTS_IMPORTS = 'artifacts_imports';
 
-    public const string ARTEFACTS_MAIL = 'artefacts_mail';
+    public const string ARTIFACTS_MAIL = 'artifacts_mail';
 
-    public const string ARTEFACTS_DROP = 'artefacts_drop';
+    public const string ARTIFACTS_DROP = 'artifacts_drop';
 
     public const string BACKUPS = 'backups';
 
@@ -37,9 +37,9 @@ final class UserDataLocations
     // snapshot rather than as a copy of this directory, so DATABASE is not here.
     /** @var list<string> */
     private const array EXPORTED = [
-        self::ARTEFACTS_IMPORTS,
-        self::ARTEFACTS_MAIL,
-        self::ARTEFACTS_DROP,
+        self::ARTIFACTS_IMPORTS,
+        self::ARTIFACTS_MAIL,
+        self::ARTIFACTS_DROP,
     ];
 
     // Connector credentials are why this list is spelled out: they sit one
@@ -63,9 +63,9 @@ final class UserDataLocations
     // location a deletion walks past.
     /** @var array<string, list<string>> location key => app-relative template */
     private const array ACCOUNT_SCOPED = [
-        self::ARTEFACTS_IMPORTS => ['private/imports/%d'],
-        self::ARTEFACTS_MAIL => ['inbox/%d'],
-        self::ARTEFACTS_DROP => ['inbox-drop/%d'],
+        self::ARTIFACTS_IMPORTS => ['private/imports/%d'],
+        self::ARTIFACTS_MAIL => ['inbox/%d'],
+        self::ARTIFACTS_DROP => ['inbox-drop/%d'],
         self::SECRETS => ['secrets/open-banking/%d.json'],
         self::KEY_MATERIAL => ['sync/identity/%d.enc', 'sync/gdk/%d.enc'],
     ];
@@ -73,9 +73,9 @@ final class UserDataLocations
     // The trees that go when the last account on the device does.
     /** @var array<string, list<string>> location key => app-relative path */
     private const array DEVICE_WIDE = [
-        self::ARTEFACTS_IMPORTS => ['private/imports'],
-        self::ARTEFACTS_MAIL => ['inbox'],
-        self::ARTEFACTS_DROP => ['inbox-drop'],
+        self::ARTIFACTS_IMPORTS => ['private/imports'],
+        self::ARTIFACTS_MAIL => ['inbox'],
+        self::ARTIFACTS_DROP => ['inbox-drop'],
         self::SECRETS => ['secrets'],
         self::KEY_MATERIAL => ['sync'],
         self::BACKUPS => ['backups'],
@@ -125,9 +125,9 @@ final class UserDataLocations
     {
         return [
             self::DATABASE => UserDataPathService::databaseFile(),
-            self::ARTEFACTS_IMPORTS => UserDataPathService::appPath('private/imports'),
-            self::ARTEFACTS_MAIL => UserDataPathService::appPath('inbox'),
-            self::ARTEFACTS_DROP => UserDataPathService::appPath('inbox-drop'),
+            self::ARTIFACTS_IMPORTS => UserDataPathService::appPath('private/imports'),
+            self::ARTIFACTS_MAIL => UserDataPathService::appPath('inbox'),
+            self::ARTIFACTS_DROP => UserDataPathService::appPath('inbox-drop'),
             self::BACKUPS => UserDataPathService::backupsPath(),
             self::SECRETS => UserDataPathService::secretsPath(),
             self::LOGS => UserDataPathService::logsDirectory(),
@@ -204,7 +204,7 @@ final class UserDataLocations
     /**
      * @return array<string, string> location key => resolved absolute path
      */
-    public static function artefacts(): array
+    public static function artifacts(): array
     {
         return array_intersect_key(self::all(), array_flip(self::EXPORTED));
     }

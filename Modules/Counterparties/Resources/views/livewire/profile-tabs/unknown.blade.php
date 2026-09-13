@@ -8,10 +8,10 @@
 <div class="space-y-6" style="margin-top: var(--space-5);">
     <x-counterparties::frame style="text-align: center; padding: var(--space-6);">
         <h3 style="font-size: var(--text-base); font-weight: 600; color: var(--color-text); margin: 0 0 var(--space-2);">
-            {{ Lang::get('counterparties::profile.unknown.not_labelled_heading') }}
+            {{ Lang::get('counterparties::profile.unknown.not_labeled_heading') }}
         </h3>
         <p style="font-size: var(--text-sm); color: var(--color-text-muted); margin: 0 0 var(--space-4); max-width: 480px; margin-left: auto; margin-right: auto;">
-            {{ Lang::get('counterparties::profile.unknown.not_labelled_body') }}
+            {{ Lang::get('counterparties::profile.unknown.not_labeled_body') }}
         </p>
         <a
             href="{{ Destination::Triage->url(['queue_first' => $profile->id]) }}"

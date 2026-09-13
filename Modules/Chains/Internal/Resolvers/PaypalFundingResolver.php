@@ -218,9 +218,9 @@ final readonly class PaypalFundingResolver
         // EUR 50.00 and was written confirmed at 1.000.
         $amountMinor = self::toInt($row->amount_minor ?? null);
         $currency = self::toString($row->currency ?? null);
-        $centre = CarbonImmutable::parse(self::toString($row->booked_at ?? null));
+        $center = CarbonImmutable::parse(self::toString($row->booked_at ?? null));
 
-        $partnerId = $this->counterLegFor($accountId, -$amountMinor, $currency, $centre, null, $user);
+        $partnerId = $this->counterLegFor($accountId, -$amountMinor, $currency, $center, null, $user);
         if ($partnerId === null) {
             return null;
         }
@@ -229,7 +229,7 @@ final readonly class PaypalFundingResolver
         // A second incoming row of the same size in the window is a second
         // answer to the same question — a webshop refund took the place of the
         // real funder and, written confirmed, never reached the review queue.
-        $ambiguous = $this->counterLegFor($accountId, -$amountMinor, $currency, $centre, $partnerId, $user) !== null;
+        $ambiguous = $this->counterLegFor($accountId, -$amountMinor, $currency, $center, $partnerId, $user) !== null;
 
         $referenceId = $parsed['row']['Reference Txn ID'] ?? null;
 
@@ -257,7 +257,7 @@ final readonly class PaypalFundingResolver
 
     // The one counter-leg search, asked through the service Transfers owns
     // rather than re-implemented here.
-    private function counterLegFor(int $accountId, int $amountMinor, string $currency, CarbonImmutable $centre, ?int $exclude, User $user): ?int
+    private function counterLegFor(int $accountId, int $amountMinor, string $currency, CarbonImmutable $center, ?int $exclude, User $user): ?int
     {
         return $this->pairs->counterLegOnAccount(
             new CounterLegMatch(
@@ -269,9 +269,9 @@ final readonly class PaypalFundingResolver
                 excludeTransactionId: $exclude,
             ),
             new CounterLegWindow(
-                $centre,
+                $center,
                 CounterLegWindow::DEFAULT_DAYS,
-                CounterLegOrder::NearestToCentre,
+                CounterLegOrder::NearestToCenter,
             ),
             $user,
         );
@@ -638,9 +638,9 @@ final readonly class PaypalFundingResolver
             ($this->session)(),
         )['value'];
 
-        $normalised = $this->fingerprints->normalize($plain);
+        $normalized = $this->fingerprints->normalize($plain);
 
-        return $normalised === '' ? null : $normalised;
+        return $normalized === '' ? null : $normalized;
     }
 
     private function levenshteinSimilarity(string $a, string $b): float
@@ -656,8 +656,8 @@ final readonly class PaypalFundingResolver
 
     // ConfirmChainLink auto-promotes every remaining candidate once three
     // confirmed links share this hash.
-    private function signatureHash(string $normalisedMerchant, string $fundingIban): string
+    private function signatureHash(string $normalizedMerchant, string $fundingIban): string
     {
-        return hash('sha256', $normalisedMerchant.'|'.$fundingIban);
+        return hash('sha256', $normalizedMerchant.'|'.$fundingIban);
     }
 }

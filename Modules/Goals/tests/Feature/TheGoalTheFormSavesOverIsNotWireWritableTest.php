@@ -30,7 +30,7 @@ beforeEach(function (): void {
         'target_minor' => 100000,
         'status' => 'active',
     ]);
-    $this->neighbour = Goal::factory()->create([
+    $this->neighbor = Goal::factory()->create([
         'user_id' => $this->user->id,
         'name' => 'Neighbour',
         'target_minor' => 500000,
@@ -51,7 +51,7 @@ it('refuses a payload that moves the save onto a second goal', function (): void
         $this,
         goalsPageSnapshot(),
         [
-            'editGoalId' => $this->neighbour->id,
+            'editGoalId' => $this->neighbor->id,
             'name' => 'Overwritten',
             'targetAmount' => '10,00',
             'targetDate' => '2027-01-01',
@@ -59,7 +59,7 @@ it('refuses a payload that moves the save onto a second goal', function (): void
         [['path' => '', 'method' => 'updateGoal', 'params' => []]],
     )->assertForbidden();
 
-    $this->assertDatabaseHas('goals', ['id' => $this->neighbour->id, 'name' => 'Neighbour', 'target_minor' => 500000]);
+    $this->assertDatabaseHas('goals', ['id' => $this->neighbor->id, 'name' => 'Neighbour', 'target_minor' => 500000]);
     $this->assertDatabaseHas('goals', ['id' => $this->onScreen->id, 'name' => 'On screen']);
 });
 
@@ -84,5 +84,5 @@ it('still saves the goal openEdit put in the form', function (): void {
     )->assertOk();
 
     $this->assertDatabaseHas('goals', ['id' => $this->onScreen->id, 'name' => 'Renamed', 'target_minor' => 1000]);
-    $this->assertDatabaseHas('goals', ['id' => $this->neighbour->id, 'name' => 'Neighbour']);
+    $this->assertDatabaseHas('goals', ['id' => $this->neighbor->id, 'name' => 'Neighbour']);
 });

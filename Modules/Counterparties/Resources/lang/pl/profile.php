@@ -67,8 +67,8 @@ return [
     ],
 
     'unknown' => [
-        'not_labelled_heading' => 'Ten kontrahent nie ma jeszcze etykiety',
-        'not_labelled_body' => 'Opisanie nieznanych kontrahentów pomaga Pulpitowi pokazywać dokładne sumy miesięczne i łańcuchy finansowania.',
+        'not_labeled_heading' => 'Ten kontrahent nie ma jeszcze etykiety',
+        'not_labeled_body' => 'Opisanie nieznanych kontrahentów pomaga Pulpitowi pokazywać dokładne sumy miesięczne i łańcuchy finansowania.',
         'label_cta' => 'Opisz tego kontrahenta',
     ],
 

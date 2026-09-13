@@ -33,7 +33,7 @@ beforeEach(function (): void {
         MigrationFixturePaths::ynab4Dir('v1'),
         'On screen.zip',
     );
-    $this->neighbour = app(StartMigrationRun::class)->__invoke(
+    $this->neighbor = app(StartMigrationRun::class)->__invoke(
         $this->user,
         'ynab4',
         MigrationFixturePaths::ynab4Dir('v1'),
@@ -61,11 +61,11 @@ it('refuses a payload that moves the confirm onto a second run', function (): vo
     LivewireRoundTrip::tamper(
         $this,
         migrationPreviewSnapshot($this->onScreen->id),
-        ['runId' => $this->neighbour->id],
+        ['runId' => $this->neighbor->id],
         [['path' => '', 'method' => 'confirm', 'params' => []]],
     )->assertForbidden();
 
-    expect(migrationRunStatus($this->neighbour->id))->not->toBe(MigrationRunStatus::Confirmed->value)
+    expect(migrationRunStatus($this->neighbor->id))->not->toBe(MigrationRunStatus::Confirmed->value)
         ->and(migrationRunStatus($this->onScreen->id))->not->toBe(MigrationRunStatus::Confirmed->value);
 });
 
@@ -73,11 +73,11 @@ it('refuses a payload that moves the discard onto a second run', function (): vo
     LivewireRoundTrip::tamper(
         $this,
         migrationPreviewSnapshot($this->onScreen->id),
-        ['runId' => $this->neighbour->id],
+        ['runId' => $this->neighbor->id],
         [['path' => '', 'method' => 'discard', 'params' => []]],
     )->assertForbidden();
 
-    expect(migrationRunStatus($this->neighbour->id))->not->toBe(MigrationRunStatus::Discarded->value);
+    expect(migrationRunStatus($this->neighbor->id))->not->toBe(MigrationRunStatus::Discarded->value);
 });
 
 it('still confirms the run the preview page was opened for', function (): void {
@@ -89,7 +89,7 @@ it('still confirms the run the preview page was opened for', function (): void {
     )->assertOk();
 
     expect(migrationRunStatus($this->onScreen->id))->toBe(MigrationRunStatus::Confirmed->value)
-        ->and(migrationRunStatus($this->neighbour->id))->not->toBe(MigrationRunStatus::Confirmed->value);
+        ->and(migrationRunStatus($this->neighbor->id))->not->toBe(MigrationRunStatus::Confirmed->value);
 });
 
 it('refuses a payload that moves the results page onto a second run', function (): void {
@@ -100,5 +100,5 @@ it('refuses a payload that moves the results page onto a second run', function (
         'migration.migration-results',
     );
 
-    LivewireRoundTrip::tamper($this, $snapshot, ['runId' => $this->neighbour->id])->assertForbidden();
+    LivewireRoundTrip::tamper($this, $snapshot, ['runId' => $this->neighbor->id])->assertForbidden();
 });

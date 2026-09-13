@@ -257,7 +257,7 @@ final class Camt053Adapter implements SourceAdapter
             amountMinor: $signed,
             sourceRef: $sourceRef,
             description: $description,
-            rawPayload: $this->serialiseSepaFragment($entry, $txDtls, $msgId, $childDirection),
+            rawPayload: $this->serializeSepaFragment($entry, $txDtls, $msgId, $childDirection),
             sourceRowIndex: $rowIndex,
             settledAmountMinor: $settledMinor,
             settledCurrency: $settledCurrency,
@@ -397,15 +397,15 @@ final class Camt053Adapter implements SourceAdapter
 
     private function collapseWhitespace(string $s): string
     {
-        $normalised = preg_replace('/\s+/u', ' ', $s);
+        $normalized = preg_replace('/\s+/u', ' ', $s);
 
-        return trim(is_string($normalised) ? $normalised : $s);
+        return trim(is_string($normalized) ? $normalized : $s);
     }
 
     /**
      * @return array{sepa: array<string, mixed>}
      */
-    private function serialiseSepaFragment(Entry $entry, ?EntryTransactionDetail $txDtls, ?string $msgId, ?string $childDirection): array
+    private function serializeSepaFragment(Entry $entry, ?EntryTransactionDetail $txDtls, ?string $msgId, ?string $childDirection): array
     {
         $btc = $entry->getBankTransactionCode();
         $family = self::domainFamily($btc?->getDomain());

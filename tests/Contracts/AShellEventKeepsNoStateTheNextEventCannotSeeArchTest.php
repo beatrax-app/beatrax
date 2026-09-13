@@ -33,9 +33,9 @@ function shellStateAnchors(): array
 /**
  * @return list<string>
  */
-function shellStateOffences(): array
+function shellStateOffenses(): array
 {
-    $offences = [];
+    $offenses = [];
 
     foreach (ShellEventGraph::reach() as $class => $seed) {
         // A name the graph reached but the autoloader cannot resolve carries no
@@ -55,11 +55,11 @@ function shellStateOffences(): array
                 continue;
             }
 
-            $offences[] = $class.'::$'.$property->getName().' is mutable (reached from '.$seed.')';
+            $offenses[] = $class.'::$'.$property->getName().' is mutable (reached from '.$seed.')';
         }
     }
 
-    return $offences;
+    return $offenses;
 }
 
 it('reaches the state a shell event actually writes', function (): void {
@@ -86,9 +86,9 @@ it('reaches the state a shell event actually writes', function (): void {
 });
 
 it('never lets a shell event keep state in something that ends with the request', function (): void {
-    $offences = shellStateOffences();
+    $offenses = shellStateOffenses();
 
-    expect($offences)->toBe([], implode("\n", array_merge($offences, [
+    expect($offenses)->toBe([], implode("\n", array_merge($offenses, [
         '',
         'A shell event is one HTTP request to _native/api/events, served by a',
         'PHP process that exits when it answers. Nothing written to a property',

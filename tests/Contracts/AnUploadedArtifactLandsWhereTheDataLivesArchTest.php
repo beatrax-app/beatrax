@@ -19,7 +19,7 @@ use Tests\Contracts\Support\RepoTree;
 // answers.
 
 /** Whether the file resolves a filesystem disk by name, in either spelling. */
-function uploadedArtefactNamesADisk(string $source): bool
+function uploadedArtifactNamesADisk(string $source): bool
 {
     return preg_match('/(?:Storage::disk|->disk)\s*\(/', $source) === 1;
 }
@@ -31,12 +31,12 @@ function uploadedArtefactNamesADisk(string $source): bool
  *
  * @return list<string> production files that resolve a filesystem disk by name
  */
-function uploadedArtefactDiskCallers(): array
+function uploadedArtifactDiskCallers(): array
 {
     $found = [];
 
     foreach (RepoTree::files(RepoTree::PRODUCTION_PHP) as $path) {
-        if (uploadedArtefactNamesADisk((string) file_get_contents($path))) {
+        if (uploadedArtifactNamesADisk((string) file_get_contents($path))) {
             $found[] = str_replace(RepoTree::root().'/', '', $path);
         }
     }
@@ -90,7 +90,7 @@ it('keeps the binding where the container can apply it before a disk resolves', 
 // A new caller naming a disk this rule has not considered is the way the
 // defect returns, so the set is closed rather than sampled.
 it('has no filesystem-disk caller that has not been accounted for', function (): void {
-    $callers = uploadedArtefactDiskCallers();
+    $callers = uploadedArtifactDiskCallers();
 
     expect($callers)->toBe(['Modules/Import/Public/Actions/RunImport.php'], implode("\n  ", [
         'One place in the product resolves a filesystem disk by name, and the binding above',
@@ -104,12 +104,12 @@ it('has no filesystem-disk caller that has not been accounted for', function ():
 });
 
 it('reads a disk resolved by name in both spellings, and leaves a method that merely starts with one alone', function (): void {
-    expect(uploadedArtefactNamesADisk("<?php Storage::disk('local')->put(\$path, \$body);"))
+    expect(uploadedArtifactNamesADisk("<?php Storage::disk('local')->put(\$path, \$body);"))
         ->toBeTrue('the facade spelling is one of the two ways a disk is named');
 
-    expect(uploadedArtefactNamesADisk('<?php $this->storage->disk(self::STORAGE_DISK);'))
+    expect(uploadedArtifactNamesADisk('<?php $this->storage->disk(self::STORAGE_DISK);'))
         ->toBeTrue('the injected-manager spelling is the one RunImport uses');
 
-    expect(uploadedArtefactNamesADisk('<?php $report->diskUsageInBytes();'))
+    expect(uploadedArtifactNamesADisk('<?php $report->diskUsageInBytes();'))
         ->toBeFalse('a method whose name merely starts with disk resolves nothing');
 });

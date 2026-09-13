@@ -3,11 +3,11 @@
 @use('Modules\Core\Public\Support\Lang')
 @inject('sessionStore', 'session.store')
 @inject('translator', 'translator')
-@props(['labelled' => false, 'model' => null])
+@props(['labeled' => false, 'model' => null])
 @php
-    $wrapperClass = $labelled ? 'space-y-1' : '';
-    $formClass = $labelled ? 'flex gap-2' : 'locale-switcher';
-    $selectClass = $labelled ? 'locale-switcher-select w-full' : 'locale-switcher-select';
+    $wrapperClass = $labeled ? 'space-y-1' : '';
+    $formClass = $labeled ? 'flex gap-2' : 'locale-switcher';
+    $selectClass = $labeled ? 'locale-switcher-select w-full' : 'locale-switcher-select';
 
     // The translator always reports a concrete locale, so it cannot tell "en
     // chosen" from "nothing chosen, English by default". The session key can,
@@ -43,7 +43,7 @@
     changing the endpoint. Alpine absent, the native submit still runs: desktop
     keeps its no-JS guarantee, and the mobile WebView always has JS.
 
-    `labelled` is for a screen that also carries a COUNTRY picker. There the
+    `labeled` is for a screen that also carries a COUNTRY picker. There the
     two are a sentence apart and read alike, so the language one has to say in
     visible copy what it changes — and, as pointedly, what it does not.
 
@@ -79,7 +79,7 @@
     language they had stored.
 --}}
 <div class="{{ $wrapperClass }}">
-@if ($labelled)
+@if ($labeled)
     <label class="block text-sm text-slate-900 dark:text-slate-100" for="locale-switcher-select">{{ Lang::get('core::settings.language.label') }}</label>
 @endif
 @if ($model !== null)
@@ -92,7 +92,7 @@
         x-on:locale-applied.window="document.documentElement.lang = $event.detail.tag"
     >
         <x-core::locale-select
-            :labelled="$labelled"
+            :labeled="$labeled"
             :selectClass="$selectClass"
             :selected="$selectedLocale"
             name="code"
@@ -110,7 +110,7 @@
 >
     @csrf
     <x-core::locale-select
-        :labelled="$labelled"
+        :labeled="$labeled"
         :selectClass="$selectClass"
         :selected="$selectedLocale"
         name="code"
@@ -129,7 +129,7 @@
     >{{ Lang::get('core::settings.language.apply') }}</button>
 </form>
 @endif
-@if ($labelled)
+@if ($labeled)
     <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.language.help') }}</p>
 @endif
 </div>

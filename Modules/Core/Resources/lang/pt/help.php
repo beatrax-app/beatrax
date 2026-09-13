@@ -17,9 +17,9 @@ return [
 
     'location' => [
         'database' => 'Base de dados:',
-        'artefacts_imports' => 'Extratos importados:',
-        'artefacts_mail' => 'Correio analisado:',
-        'artefacts_drop' => 'Pasta vigiada:',
+        'artifacts_imports' => 'Extratos importados:',
+        'artifacts_mail' => 'Correio analisado:',
+        'artifacts_drop' => 'Pasta vigiada:',
         'backups' => 'Cópias de segurança:',
         'secrets' => 'Credenciais das ligações:',
         'logs' => 'Registos:',
@@ -27,16 +27,16 @@ return [
 
     'copy_aria' => [
         'database' => 'Copiar o caminho da base de dados para a área de transferência',
-        'artefacts_imports' => 'Copiar o caminho dos extratos importados para a área de transferência',
-        'artefacts_mail' => 'Copiar o caminho do correio analisado para a área de transferência',
-        'artefacts_drop' => 'Copiar o caminho da pasta vigiada para a área de transferência',
+        'artifacts_imports' => 'Copiar o caminho dos extratos importados para a área de transferência',
+        'artifacts_mail' => 'Copiar o caminho do correio analisado para a área de transferência',
+        'artifacts_drop' => 'Copiar o caminho da pasta vigiada para a área de transferência',
         'backups' => 'Copiar o caminho das cópias de segurança para a área de transferência',
         'secrets' => 'Copiar o caminho das credenciais das ligações para a área de transferência',
         'logs' => 'Copiar o caminho dos registos para a área de transferência',
     ],
 
-    'artefacts_heading' => 'Os teus documentos de origem não estão dentro da cópia de segurança',
-    'artefacts_body' => 'Uma cópia de segurança contém a base de dados e mais nada. Os extratos que importaste, o correio que o analisador trouxe e os recibos que largaste na pasta vigiada ficam onde estão, nas três pastas indicadas acima. Guardar uma cópia de segurança num sítio seguro não os copia, por isso um arquivo completo implica levar também essas pastas — ou usar Exportar tudo aqui em baixo, que as junta à cópia de segurança por ti.',
+    'artifacts_heading' => 'Os teus documentos de origem não estão dentro da cópia de segurança',
+    'artifacts_body' => 'Uma cópia de segurança contém a base de dados e mais nada. Os extratos que importaste, o correio que o analisador trouxe e os recibos que largaste na pasta vigiada ficam onde estão, nas três pastas indicadas acima. Guardar uma cópia de segurança num sítio seguro não os copia, por isso um arquivo completo implica levar também essas pastas — ou usar Exportar tudo aqui em baixo, que as junta à cópia de segurança por ti.',
 
     'export_heading' => 'Exportar tudo',
     'export_body' => 'Um único arquivo com uma cópia cifrada da tua base de dados e todos os documentos de origem que deste ao Beatrax. Descompacta-o onde quiseres e os teus documentos estão lá dentro como sempre estiveram, nas pastas de onde vieram.',

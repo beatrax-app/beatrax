@@ -96,7 +96,7 @@ final class FakeGraphApiClient implements GraphApiClientContract
         $emlPath = $this->resolveEmlPath($slug);
         $contents = $this->files->get($emlPath);
 
-        return self::normaliseCrlf($contents);
+        return self::normalizeCrlf($contents);
     }
 
     /**
@@ -315,7 +315,7 @@ final class FakeGraphApiClient implements GraphApiClientContract
         return substr($providerMessageId, 0, $dash);
     }
 
-    private static function normaliseCrlf(string $contents): string
+    private static function normalizeCrlf(string $contents): string
     {
         return str_replace(["\r\n", "\n"], ["\n", "\r\n"], $contents);
     }

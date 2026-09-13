@@ -81,7 +81,7 @@ it('flattens a parsed date to its day through SafeDate and nowhere else', functi
     expect($walked)->toBeGreaterThan(2000, 'The walk read almost no PHP, so a clean answer below is the walk being broken rather than the tree being right.');
 
     expect($offenders)->toBe([], implode("\n", [
-        'A date-only field flattened to its day is SafeDate::normalisedDayOrNull(),',
+        'A date-only field flattened to its day is SafeDate::normalizedDayOrNull(),',
         'and a date somebody SUPPLIED is SafeDate::dayOrNull(), which refuses it.',
         'CarbonImmutable::parse("") is NOW, so a blank field books itself today.',
         'These spell it out a second time instead:',
@@ -118,7 +118,7 @@ it('reads both spellings of the flatten and leaves a guarded one alone', functio
     $bare = "<?php\n\$d = CarbonImmutable::parse(\$row['posted_at'])->startOfDay();\n";
     $reaching = "<?php\n\$d = SafeDate::parseOrNull(\$row['posted_at'])?->startOfDay();\n";
     // The near miss: the seam's own call, which flattens nothing here.
-    $guarded = "<?php\n\$d = SafeDate::normalisedDayOrNull(\$row['posted_at']);\n";
+    $guarded = "<?php\n\$d = SafeDate::normalizedDayOrNull(\$row['posted_at']);\n";
 
     expect(flattenToDayOffendersIn($bare, 'v'))->toBe(["v:2  CarbonImmutable::parse(\$row['posted_at'])->startOfDay()"])
         ->and(flattenToDayOffendersIn($reaching, 'v'))->toBe(["v:2  parseOrNull(\$row['posted_at'])?->startOfDay()"])

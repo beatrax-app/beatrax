@@ -39,7 +39,7 @@ const SPELLING_FLOORS = ['files' => 2000, 'tables' => 30, 'raw' => 2, 'instance'
 function writesSpeltPastTheTableLiteral(): array
 {
     $registry = app(MergeRulesRegistry::class);
-    $tables = UnannouncedWrites::travellingTables($registry);
+    $tables = UnannouncedWrites::travelingTables($registry);
     $columns = SyncedColumnWrites::mergeableColumns($registry);
 
     // Enumerated off the registry rather than off the column map: the four
@@ -109,7 +109,7 @@ it('has a denominator to read a verdict from', function (): void {
     $sites = writesSpeltPastTheTableLiteral();
 
     expect(count(SyncedColumnWrites::writerFiles()))->toBeGreaterThan(SPELLING_FLOORS['files'])
-        ->and(count(UnannouncedWrites::travellingTables(app(MergeRulesRegistry::class))))->toBeGreaterThan(SPELLING_FLOORS['tables'])
+        ->and(count(UnannouncedWrites::travelingTables(app(MergeRulesRegistry::class))))->toBeGreaterThan(SPELLING_FLOORS['tables'])
         ->and(count($sites['raw']))->toBeGreaterThanOrEqual(SPELLING_FLOORS['raw'])
         ->and(count($sites['instance']))->toBeGreaterThanOrEqual(SPELLING_FLOORS['instance']);
 

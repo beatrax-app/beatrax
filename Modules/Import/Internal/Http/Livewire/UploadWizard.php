@@ -237,7 +237,7 @@ final class UploadWizard extends Component
 
         $user = $currentUser->user();
         $tmp = $this->file->getRealPath();
-        $originalFilename = UploadFilename::sanitise($this->file->getClientOriginalName(), UploadFilename::extensionFor($this->sourceFormat));
+        $originalFilename = UploadFilename::sanitize($this->file->getClientOriginalName(), UploadFilename::extensionFor($this->sourceFormat));
 
         // Redundant with the format id, which already names the dialect. It is
         // still passed because ImportPipeline::preview() refuses asn-csv without

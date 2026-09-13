@@ -28,7 +28,7 @@ it('leaves no function harder to follow than the analyser allows', function (): 
     $onTheCeiling = 0;
 
     foreach ($files as $path) {
-        $reading = SonarCognitiveComplexity::analyse((string) file_get_contents($path));
+        $reading = SonarCognitiveComplexity::analyze((string) file_get_contents($path));
 
         foreach ($reading['functions'] as $function) {
             $measured++;
@@ -92,15 +92,15 @@ it('leaves no function harder to follow than the analyser allows', function (): 
 it('charges a branch once for itself and once for every level above it', function (): void {
     $source = '<?php function f() { if ($a) { if ($b) { if ($c) { return 1; } } } }';
 
-    expect(SonarCognitiveComplexity::analyse($source)['functions'][0]['value'])->toBe(6);
+    expect(SonarCognitiveComplexity::analyze($source)['functions'][0]['value'])->toBe(6);
 });
 
 it('separates an else-if from an elseif, which score differently', function (): void {
     $chained = '<?php function f() { if ($a) { return 1; } elseif ($b) { if ($c) { return 2; } } }';
     $nested = '<?php function f() { if ($a) { return 1; } else if ($b) { if ($c) { return 2; } } }';
 
-    expect(SonarCognitiveComplexity::analyse($chained)['functions'][0]['value'])->toBe(4);
-    expect(SonarCognitiveComplexity::analyse($nested)['functions'][0]['value'])->toBe(5);
+    expect(SonarCognitiveComplexity::analyze($chained)['functions'][0]['value'])->toBe(4);
+    expect(SonarCognitiveComplexity::analyze($nested)['functions'][0]['value'])->toBe(5);
 });
 
 it('charges a run of one operator once and every switch between two again', function (): void {
@@ -109,10 +109,10 @@ it('charges a run of one operator once and every switch between two again', func
     $grouped = '<?php function f() { return ($a && $b) || $c; }';
     $called = '<?php function f() { return g($a && $b) || $c; }';
 
-    expect(SonarCognitiveComplexity::analyse($same)['functions'][0]['value'])->toBe(1);
-    expect(SonarCognitiveComplexity::analyse($mixed)['functions'][0]['value'])->toBe(3);
-    expect(SonarCognitiveComplexity::analyse($grouped)['functions'][0]['value'])->toBe(2);
-    expect(SonarCognitiveComplexity::analyse($called)['functions'][0]['value'])->toBe(2);
+    expect(SonarCognitiveComplexity::analyze($same)['functions'][0]['value'])->toBe(1);
+    expect(SonarCognitiveComplexity::analyze($mixed)['functions'][0]['value'])->toBe(3);
+    expect(SonarCognitiveComplexity::analyze($grouped)['functions'][0]['value'])->toBe(2);
+    expect(SonarCognitiveComplexity::analyze($called)['functions'][0]['value'])->toBe(2);
 });
 
 it('nests a ternary inside the branch it was written in', function (): void {
@@ -120,43 +120,43 @@ it('nests a ternary inside the branch it was written in', function (): void {
     $nested = '<?php function f() { return $a ? 1 : ($b ? 2 : 3); }';
     $guarded = '<?php function f() { if ($a) { return $b ? 1 : 2; } return 0; }';
 
-    expect(SonarCognitiveComplexity::analyse($flat)['functions'][0]['value'])->toBe(1);
-    expect(SonarCognitiveComplexity::analyse($nested)['functions'][0]['value'])->toBe(3);
-    expect(SonarCognitiveComplexity::analyse($guarded)['functions'][0]['value'])->toBe(3);
+    expect(SonarCognitiveComplexity::analyze($flat)['functions'][0]['value'])->toBe(1);
+    expect(SonarCognitiveComplexity::analyze($nested)['functions'][0]['value'])->toBe(3);
+    expect(SonarCognitiveComplexity::analyze($guarded)['functions'][0]['value'])->toBe(3);
 });
 
 it('counts a nullable return type as a type and never as a ternary', function (): void {
     $arrow = '<?php $f = static fn (mixed $v): ?string => is_string($v) ? $v : null;';
     $typed = '<?php function f(?int $a = null): ?string { return null; }';
 
-    expect(SonarCognitiveComplexity::analyse($arrow)['total'])->toBe(1);
-    expect(SonarCognitiveComplexity::analyse($typed)['functions'][0]['value'])->toBe(0);
+    expect(SonarCognitiveComplexity::analyze($arrow)['total'])->toBe(1);
+    expect(SonarCognitiveComplexity::analyze($typed)['functions'][0]['value'])->toBe(0);
 });
 
 it('folds a closure into the function holding it, one level deeper', function (): void {
     $source = '<?php function f() { g(function () { if ($a) { return 1; } }); }';
     $arrowHolder = '<?php function f() { g(static fn () => $a ? 1 : 2); }';
 
-    expect(SonarCognitiveComplexity::analyse($source)['functions'])->toHaveCount(1);
-    expect(SonarCognitiveComplexity::analyse($source)['functions'][0]['value'])->toBe(2);
-    expect(SonarCognitiveComplexity::analyse($arrowHolder)['functions'][0]['value'])->toBe(2);
+    expect(SonarCognitiveComplexity::analyze($source)['functions'])->toHaveCount(1);
+    expect(SonarCognitiveComplexity::analyze($source)['functions'][0]['value'])->toBe(2);
+    expect(SonarCognitiveComplexity::analyze($arrowHolder)['functions'][0]['value'])->toBe(2);
 });
 
 it('scores the statements a case label introduces', function (): void {
     $source = '<?php function f() { foreach ($x as $y) { switch ($k) { case 1: if ($a && $b) { return 1; } break; default: return 0; } } }';
 
-    expect(SonarCognitiveComplexity::analyse($source)['functions'][0]['value'])->toBe(7);
+    expect(SonarCognitiveComplexity::analyze($source)['functions'][0]['value'])->toBe(7);
 });
 
 it('reads a method named for a keyword and a class header carrying a comma', function (): void {
     $keyword = '<?php final class C implements A, B { public function for(): int { if ($a) { return 1; } return 0; } }';
 
-    expect(SonarCognitiveComplexity::analyse($keyword)['functions'][0]['name'])->toBe('for');
-    expect(SonarCognitiveComplexity::analyse($keyword)['functions'][0]['value'])->toBe(1);
+    expect(SonarCognitiveComplexity::analyze($keyword)['functions'][0]['name'])->toBe('for');
+    expect(SonarCognitiveComplexity::analyze($keyword)['functions'][0]['value'])->toBe(1);
 });
 
 it('adds a file total from the functions in it and the code around them', function (): void {
     $source = '<?php if ($boot) { echo 1; } function f() { if ($a) { return 1; } } class C { public function m() { if ($b) { if ($c) { return 1; } } } }';
 
-    expect(SonarCognitiveComplexity::analyse($source)['total'])->toBe(5);
+    expect(SonarCognitiveComplexity::analyze($source)['total'])->toBe(5);
 });

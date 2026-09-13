@@ -132,7 +132,7 @@ return [
     'errors' => [
         'totals_must_match' => 'Kaydedilemedi — kalem toplamları işlem toplamıyla tam olarak eşleşmeli.',
         'not_found' => 'İşlem bulunamadı.',
-        'amount_zero' => 'Tutar :amount olamaz',
+        'amount_positive' => 'Sıfırdan büyük bir tutar gir.',
         'choose_category' => 'Bir kategori seç.',
         'choose_before_removing' => 'Kaldırmadan önce bir kategori seç.',
         'choose_before_unsplitting' => 'Bölmeyi geri almadan önce bir kategori seç.',

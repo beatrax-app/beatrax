@@ -12,7 +12,7 @@ return [
     'section_planning' => 'PLÁNOVÁNÍ',
     'section_insights' => 'ANALÝZY',
     'section_ingestion' => 'NAČÍTÁNÍ DAT',
-    'section_organise' => 'ORGANIZACE',
+    'section_organize' => 'ORGANIZACE',
     'section_settings' => 'NASTAVENÍ',
 
     'nav' => [

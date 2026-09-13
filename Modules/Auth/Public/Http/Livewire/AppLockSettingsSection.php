@@ -23,7 +23,7 @@ use Modules\Auth\Internal\Lock\IdleTimeoutOptions;
 use Modules\Auth\Internal\Lock\PlatformDetector;
 use Modules\Auth\Public\AppLockEvents;
 use Modules\Auth\Public\Contracts\ColdStartVault;
-use Modules\Auth\Public\Http\Livewire\Concerns\ManagesBiometricEnrolment;
+use Modules\Auth\Public\Http\Livewire\Concerns\ManagesBiometricEnrollment;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Enums\Duration;
@@ -36,7 +36,7 @@ final class AppLockSettingsSection extends Component
 {
     use DispatchesToast;
     use HoldsFlashMessage;
-    use ManagesBiometricEnrolment;
+    use ManagesBiometricEnrollment;
 
     // The code boxes on this screen hold no property. Digits accumulate in the
     // panel's own Alpine scope and cross once, as a method argument, the way

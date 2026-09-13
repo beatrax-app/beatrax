@@ -264,7 +264,7 @@ final class ReconcilePage extends Component
             ->where('status', ClearedStatus::Reconciled->value)
             ->max('posted_at');
 
-        return is_string($latest) ? SafeDate::normalisedDayOrNull($latest) : null;
+        return is_string($latest) ? SafeDate::normalizedDayOrNull($latest) : null;
     }
 
     // Keyed on an amount being recorded, not on the date beside it: the demo
@@ -395,7 +395,7 @@ final class ReconcilePage extends Component
             $this->statementCurrency($connection, $userId, $baseCurrency),
         );
         $rawDate = $row->closing_balance_date ?? $row->period_end ?? null;
-        $prefill = is_string($rawDate) ? SafeDate::normalisedDayOrNull($rawDate) : null;
+        $prefill = is_string($rawDate) ? SafeDate::normalizedDayOrNull($rawDate) : null;
         if ($prefill !== null) {
             $this->statementDate = $prefill->toDateString();
         }
@@ -430,7 +430,7 @@ final class ReconcilePage extends Component
             self::toInt($row->total_amount_minor),
             $this->statementCurrency($connection, $userId, $baseCurrency),
         );
-        $prefill = is_string($row->period_end) ? SafeDate::normalisedDayOrNull($row->period_end) : null;
+        $prefill = is_string($row->period_end) ? SafeDate::normalizedDayOrNull($row->period_end) : null;
         if ($prefill !== null) {
             $this->statementDate = $prefill->toDateString();
         }

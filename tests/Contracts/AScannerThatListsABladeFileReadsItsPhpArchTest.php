@@ -136,7 +136,7 @@ function bladeScannerGuardFiles(): array
 // Read with the tokeniser rather than with a pattern: `token_get_all` written
 // inside a string or a comment is not a call, and a guard that mistook one for
 // the other would be the same mistake one level up.
-function bladeScannerTokenisesDirectly(string $source): bool
+function bladeScannerTokenizesDirectly(string $source): bool
 {
     $tokens = token_get_all($source);
 
@@ -184,7 +184,7 @@ it('leaves no guard tokenising a walk that holds a template without reading its 
     // answer this whole file exists to make impossible.
     expect(count($files))->toBeGreaterThan(1500, 'The guard-file walk found '.count($files).' files, so its verdict covers almost nothing.');
 
-    $tokenising = [];
+    $tokenizing = [];
     $offenders = [];
     $exempt = [];
 
@@ -195,11 +195,11 @@ it('leaves no guard tokenising a walk that holds a template without reading its 
         $relative = str_replace(base_path().'/', '', $path);
         $source = (string) file_get_contents($path);
 
-        if (! bladeScannerTokenisesDirectly($source)) {
+        if (! bladeScannerTokenizesDirectly($source)) {
             continue;
         }
 
-        $tokenising[] = $relative;
+        $tokenizing[] = $relative;
 
         if (array_key_exists($relative, BLADE_SCANNER_WALKS_NO_TEMPLATE)) {
             $exempt[] = $relative;
@@ -212,7 +212,7 @@ it('leaves no guard tokenising a walk that holds a template without reading its 
         }
     }
 
-    expect(count($tokenising))->toBeGreaterThan(15, 'The reader recognised almost no tokenising guard, which is what a broken tokeniser looks like.');
+    expect(count($tokenizing))->toBeGreaterThan(15, 'The reader recognised almost no tokenising guard, which is what a broken tokeniser looks like.');
 
     expect($offenders)->toBe([], implode("\n  ", [
         'These hand a file straight to the tokeniser, and the walk that chose it holds',
@@ -252,11 +252,11 @@ it('still holds each exempted walk to the reason it was granted for', function (
 // The reader half of the enumeration, checked against planted sources rather
 // than against the tree: a guard that stopped recognising a call would report
 // no tokenising guard at all, and read as a tree with nothing to fix.
-it('tells a call to the tokeniser from its name merely written down', function (string $body, bool $tokenises): void {
-    expect(bladeScannerTokenisesDirectly('<?php '.$body))->toBe(
-        $tokenises,
-        'The reader answered '.var_export(! $tokenises, true).' for a line it has to read as '
-        .($tokenises ? 'a call to the tokeniser' : 'the name merely written down').': '.$body
+it('tells a call to the tokeniser from its name merely written down', function (string $body, bool $tokenizes): void {
+    expect(bladeScannerTokenizesDirectly('<?php '.$body))->toBe(
+        $tokenizes,
+        'The reader answered '.var_export(! $tokenizes, true).' for a line it has to read as '
+        .($tokenizes ? 'a call to the tokeniser' : 'the name merely written down').': '.$body
     );
 })->with([
     'a direct call' => ['$t = token_get_all($source);', true],

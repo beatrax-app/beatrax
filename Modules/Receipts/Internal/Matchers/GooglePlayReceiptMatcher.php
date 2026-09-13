@@ -112,7 +112,7 @@ final readonly class GooglePlayReceiptMatcher implements SenderMatcher
         }
         [$orderId, $nativeMinor, $settledMinor, $settledCurrency, $merchant] = $charge;
 
-        $bookedAt = SafeDate::normalisedDayOrNull($parsed->headers['date'] ?? '');
+        $bookedAt = SafeDate::normalizedDayOrNull($parsed->headers['date'] ?? '');
         if ($bookedAt === null) {
             return MatchOutcomeDto::unmatched('invalid_date_header');
         }

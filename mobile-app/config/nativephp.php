@@ -44,7 +44,7 @@ declare(strict_types=1);
  * this root IS the repo root and Modules/ sits beside config/. Probed rather
  * than assumed, the same way every patch script probes for the scaffold.
  *
- * @see ../../scripts/nativephp_ios_purpose_string_localisations.php
+ * @see ../../scripts/nativephp_ios_purpose_string_localizations.php
  */
 $purposeStringsFile = array_values(array_filter([
     __DIR__.'/../Modules/Mobile/Resources/ios/lang/en/purpose-strings.php',

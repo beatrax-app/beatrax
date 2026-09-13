@@ -213,7 +213,7 @@ the two together stepped past a row: labelling the first of three
 unknowns offered the third, and the second was never put in front of the
 reader at all. Only `nextItem` / `previousItem` / `skipForNow` move the
 cursor now;
-`Modules/Counterparties/tests/Feature/LabellingOneUnknownOffersTheNextOneNotTheOneAfterItTest.php`
+`Modules/Counterparties/tests/Feature/LabelingOneUnknownOffersTheNextOneNotTheOneAfterItTest.php`
 walks a queue of three and names every card it was shown.
 
 ### What the reader typed is theirs
