@@ -35,7 +35,7 @@ function mobileRootTrackedLinks(): array
 // An exact count, not a floor: losing one link moves this by one, and a floor
 // set anywhere below the real number cannot tell that from a full set.
 it('reads the index at all, so an empty listing cannot report a linked tree', function (): void {
-    expect(mobileRootTrackedLinks())->toHaveCount(25);
+    expect(mobileRootTrackedLinks())->toHaveCount(26);
 });
 
 // The bundle is built from mobile-app/ and ships what it finds there, so a

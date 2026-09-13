@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Route;
 use Modules\Core\Public\Services\UserDataPathService;
 use Tests\Contracts\Support\RepoTree;
 
@@ -121,4 +122,83 @@ it('reads a disk resolved by name in both spellings, and leaves a method that me
 
     expect(uploadedArtifactNamesADisk('<?php $report->diskUsageInBytes();'))
         ->toBeFalse('a method whose name merely starts with disk resolves nothing');
+});
+
+/**
+ * Every registered route whose name the framework minted for a served disk.
+ *
+ * @return list<string>
+ */
+function uploadedArtifactServedDiskRoutes(): array
+{
+    $named = [];
+
+    foreach (Route::getRoutes()->getRoutes() as $route) {
+        $name = (string) $route->getName();
+
+        if (str_starts_with($name, 'storage.')) {
+            $named[] = implode('|', $route->methods()).' /'.$route->uri().' ('.$name.')';
+        }
+    }
+
+    sort($named);
+
+    return $named;
+}
+
+// The root above is only half the question. The framework's own default sets
+// `serve => true` on this disk, and the provider then registers GET and PUT on
+// /storage/{path} with where('path', '.*') inside $this->app->booted() -- after
+// the middleware groups, so with no session, no CSRF, no user and no app-lock.
+it('serves no disk over HTTP', function (): void {
+    $served = [];
+
+    foreach ((array) config('filesystems.disks') as $disk => $config) {
+        if (is_array($config) && ($config['serve'] ?? false) === true) {
+            $served[] = (string) $disk;
+        }
+    }
+
+    expect($served)->toBe([], implode("\n  ", [
+        'These disks are configured to be served: '.implode(', ', $served).'.',
+        'The local disk is rooted on the live user-data tree, which holds imports/{userId}/{sha256}.',
+        'ServeFile does require an APP_KEY signature for a disk with no visibility key — but that',
+        'signature authenticates the path, not the caller, so one scheme spans every user\'s',
+        'directory, and PUT ...?upload=1 writes the request body to whichever path it names.',
+    ]));
+});
+
+// The config key and the route are two different claims: the key could be right
+// while a second disk, or a package, registers the same route under another
+// name. This asks the router what it actually holds.
+it('registers no route the framework minted for a disk', function (): void {
+    $routes = uploadedArtifactServedDiskRoutes();
+
+    expect($routes)->toBe([], implode("\n  ", [
+        'The router holds these disk-serving routes:',
+        ...$routes,
+        '',
+        'Set serve => false on the disk in config/filesystems.php rather than deleting the route.',
+    ]));
+});
+
+// Without this the two assertions above pass on a router that registered
+// nothing at all, which is the same empty list and none of the same behaviour.
+it('has a routing table to have found one in', function (): void {
+    expect(Route::has('dashboard'))
+        ->toBeTrue('the application\'s own routes have to be registered, or an absent storage route proves nothing');
+});
+
+// The disk config is read the same way the provider reads it, and the provider
+// treats a missing key as false. So the guard has to bite on a disk that says
+// serve => true, and leave one that says nothing alone.
+it('sees a served disk, and leaves a disk that names no serving alone', function (): void {
+    $served = static fn (array $disks): array => array_values(array_keys(array_filter(
+        $disks,
+        static fn (array $config): bool => ($config['serve'] ?? false) === true,
+    )));
+
+    expect($served(['local' => ['driver' => 'local', 'serve' => true]]))->toBe(['local'])
+        ->and($served(['local' => ['driver' => 'local', 'serve' => false]]))->toBe([])
+        ->and($served(['local' => ['driver' => 'local']]))->toBe([]);
 });
