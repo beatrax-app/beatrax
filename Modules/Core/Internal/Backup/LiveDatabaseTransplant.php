@@ -8,7 +8,6 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Public\Exceptions\BackupIoException;
 use Modules\Core\Public\Services\LiveConnectionPurge;
-use RuntimeException;
 use SQLite3;
 use Throwable;
 
@@ -40,15 +39,15 @@ final readonly class LiveDatabaseTransplant
 
     // db:restore's mid-swap catch is keyed on ours, and it is what keeps
     // maintenance mode on and names the operator's undo. SQLite3 raises a bare
-    // Exception for a file it cannot open, so every ending here is translated
-    // rather than only the one we raise ourselves.
+    // Exception for a file it cannot open and a PHP warning for a copy that
+    // stops part way, so an ending we did not raise is given our type too.
     private function write(string $sourcePath, string $livePath, string $undoHint): void
     {
         try {
-            $this->copyPages($sourcePath, $livePath);
+            $this->copyPages($sourcePath, $livePath, $undoHint);
         } catch (Throwable $e) {
-            throw new BackupIoException(
-                'Restore could not write the backup into the live database; the pre-restore snapshot is at '.$undoHint.'.',
+            throw $e instanceof BackupIoException ? $e : new BackupIoException(
+                'Restore could not open a database to write the backup into; the pre-restore snapshot is at '.$undoHint.'.',
                 0,
                 $e,
             );
@@ -59,11 +58,11 @@ final readonly class LiveDatabaseTransplant
     // bookkeeping stays coherent and nothing is unlinked under a process
     // holding it mapped. The file copy remains only for a runtime without the
     // sqlite3 extension: it is the path that poisoned the phone.
-    private function copyPages(string $sourcePath, string $livePath): void
+    private function copyPages(string $sourcePath, string $livePath, string $undoHint): void
     {
         if (! class_exists(SQLite3::class)) {
             if ($this->files->copy($sourcePath, $livePath) === false) {
-                throw new RuntimeException('The restore copy did not complete.');
+                throw new BackupIoException('Restore copy failed; the pre-restore snapshot is at '.$undoHint.'.');
             }
 
             $this->files->delete([$livePath.'-wal', $livePath.'-shm']);
@@ -78,7 +77,7 @@ final readonly class LiveDatabaseTransplant
 
             try {
                 if (! $source->backup($destination)) {
-                    throw new RuntimeException('SQLite refused to copy the pages of the backup into the live database.');
+                    throw new BackupIoException('Restore could not write the backup into the live database; the pre-restore snapshot is at '.$undoHint.'.');
                 }
             } finally {
                 $destination->close();
