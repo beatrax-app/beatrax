@@ -7,10 +7,14 @@ use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Receipts\Internal\Exceptions\FileDropBlobWriteException;
 use Modules\Receipts\Public\Pipeline\FileDropEmlBlobStore;
+use Tests\Helpers\FailingStream;
 
-// Only two of put()'s failure branches can be provoked with real filesystem
-// faults. The chmod, short-write and catch-all arms are defence-in-depth and
-// are covered by the exception's own factory test instead.
+// Two of put()'s failure branches are provoked with real filesystem faults,
+// and the three that ask whether the bytes reached the disk are provoked over
+// a registered scheme — a full disk is not stageable with a real file, because
+// fwrite answers from a userspace buffer and the failure arrives at the flush.
+// Only the fclose arm is left uncovered: PHP's userland close cannot report a
+// failure, and a plain file still can.
 
 beforeEach(function (): void {
     $this->dir = UserDataPathService::appPath('inbox/8888/file-drop/2026/06');
@@ -66,4 +70,36 @@ it('raises atomicRenameFailed when the destination path is an existing directory
         ->toThrow(FileDropBlobWriteException::class, 'atomic rename failed');
 
     expect(is_file($target.'.tmp'))->toBeFalse();
+});
+
+afterEach(function (): void {
+    FailingStream::reset();
+});
+
+it('refuses a write the filesystem only half accepted', function (): void {
+    FailingStream::register();
+    FailingStream::$failWrites = true;
+    $path = 'beatraxfail://blobs/2026/06/message.eml';
+
+    expect(fn () => fileDropStore()->put($path, 'raw mime bytes'))
+        ->toThrow(FileDropBlobWriteException::class, 'short write');
+});
+
+// The arm this file exists for. The write was accepted, the count agreed, and
+// the bytes are still only in a buffer the flush could not drain.
+it('refuses a write whose bytes the flush could not put on disk', function (): void {
+    FailingStream::register();
+    FailingStream::$failFlush = true;
+    $path = 'beatraxfail://blobs/2026/06/message.eml';
+
+    expect(fn () => fileDropStore()->put($path, 'raw mime bytes'))
+        ->toThrow(FileDropBlobWriteException::class, 'fflush');
+});
+
+it('refuses a write the flush accepted and the fsync did not', function (): void {
+    FailingStream::register();
+    $path = 'beatraxfail://blobs/2026/06/message.eml';
+
+    expect(fn () => fileDropStore()->put($path, 'raw mime bytes'))
+        ->toThrow(FileDropBlobWriteException::class, 'fsync');
 });
