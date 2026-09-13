@@ -100,12 +100,27 @@ that tuple turned out to be a number each device counts for itself — and the
 applier still seeds it from the op's pk, so it stays out. What makes two devices
 one row there is `anomaly_alerts_uniq`, not the id.
 
-**Three tables are minted and were described here, and in their own modules, as
-derived.** `anomaly_alerts` (above), `drift_alerts` (`DriftEvaluator`) and
-`recurring_series_occurrences` (`OccurrenceWriter`) all call
-`DeviceMintedRowId::mint()`, which is `random_int(1, PHP_INT_MAX)`. Only
-`recurring_series` is genuinely derived, through `DerivedSeriesId` ->
-`DerivedRowId::for()`.
+**Five tables are minted and were described here, or in their own modules, as
+derived.** `anomaly_alerts` (above), `chain_links` (`ChainLinkInsertHelper`),
+`drift_alerts` (`DriftEvaluator`), `recurring_series_occurrences`
+(`OccurrenceWriter`) and `goals` (`GoalWriter`) all call
+`DeviceMintedRowId::mint()`, which is `random_int(1, PHP_INT_MAX)`.
+
+**The derived set is these six, and it is the call sites that say so** — not a
+list anyone keeps by hand, and not this sentence:
+
+| table | derived by |
+|---|---|
+| `envelope_moves` | `EnvelopeMoveId` |
+| `known_senders` | `PromoteDiscoveredSender` |
+| `recurring_series` | `DerivedSeriesId` |
+| `savings_insight_dismissals` | `SavingsInsightsQuery` |
+| `system_alerts` | `SystemAlertWriter`, `RecordUpdateAvailableAlert` |
+| `transaction_splits` | `SaveTransactionSplit` |
+
+`ADerivedIdClaimNamesATableThatDerivesArchTest` checks every "the `id` is
+derived" in the registry against exactly that walk, so a sixth wrong claim fails
+the build rather than being read as checked.
 
 The distinction is not pedantry, because the three id kinds behave differently
 in the one place readers reach for them — as a tie-break in an `ORDER BY`:
