@@ -57,8 +57,10 @@ abstract class GuardedStateMachine
 
     abstract protected function label(): string;
 
-    // The row is re-read under lockForUpdate INSIDE the transaction, so a
-    // concurrent transition cannot slip between the edge guard and the write.
+    // The row is re-read INSIDE the transaction, so a concurrent transition
+    // cannot slip between the edge guard and the write. What holds it is
+    // transaction_mode IMMEDIATE taking the write lock at BEGIN -- SQLite
+    // compiles lockForUpdate() to nothing, so the call below guards nothing.
     /**
      * @param  array<string, scalar|null>  $extraColumns  patched onto the same
      *                                                    row inside the transaction; `state`/`updated_at` are reserved.
