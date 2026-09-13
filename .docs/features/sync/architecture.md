@@ -1110,11 +1110,46 @@ table does not have, which is what a re-home writes — takes the row to `ok` wi
 the other eight still named. The same copy under the old check still read
 `warning  8 rows`, which is the floor this change removes.
 
-**No repair ships with this.** Replaying the fifteen stranded creates through
-`AlreadyPresentCreate::answer()` would place them, because that path now
-re-homes; it would also write to the reader's ledger, and a check that reports
-is the part that can be shipped without asking. Detection is this page; repair
-is a decision.
+**The repair ships separately, and only on being asked.** Detection is the
+section above; `sync:repair-stranded-creates` is the decision, and it is
+dry-run by default.
+
+#### Taking the fifteen again (`Commands\SyncRepairStrandedCreatesCommand`)
+
+`Internal\Merge\StrandedCreateRepair` addresses exactly the rows the census
+calls `unplaced`, read from `StrandedCreates::groups()` — the same walk, so
+"which rows" and "how many" cannot disagree. `removedHere` and `held` are not
+reachable from it whatever table is named on the command line, which is what
+makes `--table=anomaly_alerts` and `--table=system_alerts` answer with nothing
+on the measured database rather than with a refusal that has to be trusted.
+
+Each group is handed to `OpLogReplayer::replay()` per DEVICE and as creates
+alone, the way `RetriedCollisionCreates` does, so the row already sitting at the
+contested id is not fed to the merge as part of the arriving row's history. The
+insert is refused by the primary key, `AlreadyPresentCreate::answer()` answers,
+and `RehomedCreate::under()` stores the row under an id this device mints with
+the peer's aliased to it. A payload no natural key can identify is **reported
+and skipped**: `RehomedCreate` refuses the same payload for the same reason, and
+a repair that inserted it anyway would write a row every later replay duplicates.
+
+#### Why a console cannot finish it, and what it does instead
+
+`counterparties.display_name` is sealed and NOT NULL, and the peer's create
+carries it as GDK ciphertext. A console process holds no app-lock key —
+`SealedProjectionReadiness::canProject()` measured `false` on the real database
+— so it cannot open the entry and cannot re-seal it for the column. Writing the
+op log's ciphertext straight into the column would not help: the column's
+associated data is `table:field:epoch` and the log's binds the pk as well, so
+nothing could ever open it again, and `SplitCreateTail` fills a column holding
+null, never one holding the wrong bytes. The row would come back permanently
+unreadable.
+
+So the keyless arm writes **nothing to the ledger**. It records the
+`primary_key_collision` hold the refusal should have left, which is the one
+thing those fifteen were missing: `RetriedCollisionCreates` is driven by holds,
+and a build predating `RehomedCreate` left none. `SealedLedgerRecovery` — the
+one seam for getting content back inside the encryption guarantee — then places
+them whole from an unlocked session and retires the hold.
 
 ### A split leg that would overfill its transaction (`Internal\Merge\SplitOverfillGate`)
 

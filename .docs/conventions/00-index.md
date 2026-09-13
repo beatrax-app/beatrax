@@ -150,6 +150,11 @@ pass for a clean one.
   — why a read-then-insert is a statement about the past, what the connection's
   `IMMEDIATE` transaction mode already gives you, and which of the three fixes
   belongs at which site
+- [A predicate on a column that is not there](a-predicate-on-a-column-that-is-not-there.md)
+  — SQLite reads an unknown quoted name as a string literal, so `whereNotNull`
+  stops narrowing and `whereNull` matches nothing; why no static rule sees it,
+  which copy of a WAL database to measure against, and the three distinct causes
+  that wear the one symptom
 - [Architecture](../architecture/00-index.md) — the system's shape
 - [40-quality/code-standards.md](https://github.com/beatrax-app/spec/blob/main/40-quality/code-standards.md)
 - [50-governance/ai-contributors.md](https://github.com/beatrax-app/spec/blob/main/50-governance/ai-contributors.md) — the judgment rules bind AI contributions identically

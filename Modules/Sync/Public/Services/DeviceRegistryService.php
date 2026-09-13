@@ -279,12 +279,18 @@ final readonly class DeviceRegistryService
      */
     public function deviceX25519Keys(int $userId): array
     {
+        // Ordered as otherDeviceNames() is, and for the same reason: the order
+        // this came back in was the planner's, and readers took the first entry
+        // as "the peer". Nobody keys on that any more, but a map whose order
+        // moves under an ANALYZE is a trap left for the next reader.
         /** @var array<string, string> $keys */
         $keys = $this->stillADevice(
             $this->db->connection()
                 ->table('device_registry')
                 ->where('user_id', $userId)
                 ->whereNotNull('confirmed_at')
+                ->orderBy('confirmed_at')
+                ->orderBy('device_id')
         )
             ->pluck('x25519_public_key_hex', 'device_id')
             ->all();
@@ -363,10 +369,10 @@ final readonly class DeviceRegistryService
      */
     public function otherDeviceNames(int $userId): array
     {
-        // Two callers take the FIRST entry as "the peer" — PeerLanAddress
-        // dials it, ManagesManualPeerAddress offers a reader an address for it
-        // — so an unordered read lets the phone dial one desktop, remember its
-        // address, then clear that address on behalf of the other.
+        // Ordered because both readers depend on it: the phone's sync walks
+        // this in order, and ManagesManualPeerAddress offers a reader an
+        // address for the first entry. Unordered, the phone dialled one
+        // desktop and cleared its address on behalf of the other.
         /** @var array<string, string> $names */
         $names = $this->stillADevice(
             $this->db->connection()

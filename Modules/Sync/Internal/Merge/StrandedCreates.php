@@ -7,7 +7,8 @@ namespace Modules\Sync\Internal\Merge;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
-use Modules\Sync\Internal\Exceptions\CensusColumnMissingException;
+use Modules\Core\Public\Exceptions\ColumnNotDeclaredException;
+use Modules\Core\Public\Support\SchemaShape;
 use Modules\Sync\Internal\OpLog\OpType;
 use Modules\Sync\Internal\OpLog\QuarantineOutcome;
 
@@ -42,7 +43,7 @@ final readonly class StrandedCreates
     /**
      * @return array{checked: int, unplaced: array<string, int>, removedHere: array<string, int>, held: array<string, int>}
      *
-     * @throws CensusColumnMissingException
+     * @throws ColumnNotDeclaredException
      */
     public function census(int $userId): array
     {
@@ -54,10 +55,8 @@ final readonly class StrandedCreates
         foreach ($this->tables($userId) as $table) {
             $checked += $this->claimedRows($table, $userId);
 
-            foreach ($this->strandedIn($table, $userId) as $cause => $count) {
-                if ($count > 0) {
-                    $causes[$cause][$table] = $count;
-                }
+            foreach ($this->groups($table, $userId) as $group) {
+                $causes[$group['cause']][$table] = ($causes[$group['cause']][$table] ?? 0) + 1;
             }
         }
 
@@ -73,56 +72,69 @@ final readonly class StrandedCreates
     // migration running is an ordinary state, and in it every answer below is
     // wrong in a direction nothing reports -- so the census declines to give one.
     /**
-     * @throws CensusColumnMissingException
+     * @throws ColumnNotDeclaredException
      */
     private function assertEveryColumnIsThere(): void
     {
-        $schema = $this->db->connection()->getSchemaBuilder();
+        $connection = $this->db->connection();
 
         foreach (self::REQUIRED_COLUMNS as $table => $columns) {
-            $missing = array_values(array_diff($columns, $schema->getColumnListing($table)));
+            $missing = SchemaShape::missingColumns($connection, $table, $columns);
 
             if ($missing !== []) {
-                throw CensusColumnMissingException::of($table, $missing);
+                throw ColumnNotDeclaredException::on($table, $missing);
             }
         }
     }
 
+    // Every row of one table the log claims and nothing here holds, as
+    // coordinates rather than a tally. A repair addresses the same rows this
+    // counts, so both read them from here: a second walk answering "which"
+    // beside this one answering "how many" is two definitions of stranded.
     /**
-     * @return array{unplaced: int, removedHere: int, held: int}
+     * @return list<array{pk: string, devices: list<string>, cause: 'unplaced'|'removedHere'|'held', naturalKey: string|null}>
      */
-    private function strandedIn(string $table, int $userId): array
+    public function groups(string $table, int $userId): array
     {
         $absent = array_fill_keys($this->absentPks($table, $userId), true);
-        $counts = ['unplaced' => 0, 'removedHere' => 0, 'held' => 0];
+        $groups = [];
 
         // Both candidate sets in one walk, and an id in both is walked once:
         // it is the same question about the same id either way.
         foreach ($this->contestedPks($table, $userId) + $absent as $pk => $ignored) {
-            foreach ($this->unlandedRows($table, (string) $pk, $userId, ! isset($absent[$pk])) as $cause) {
-                $counts[$cause]++;
+            foreach ($this->unlandedRows($table, (string) $pk, $userId, ! isset($absent[$pk])) as $group) {
+                $groups[] = $group;
             }
         }
 
-        return $counts;
+        return $groups;
     }
 
     // Counted per ROW rather than per author: two devices that wrote the same
-    // logical row under one id and lost it lost one row, not two.
+    // logical row under one id and lost it lost one row, not two. The key is
+    // read off the same payload landed() judged, so what a repair would find
+    // the row by is what this decided it could not be found by.
     /**
-     * @return list<'unplaced'|'removedHere'|'held'>
+     * @return list<array{pk: string, devices: list<string>, cause: 'unplaced'|'removedHere'|'held', naturalKey: string|null}>
      */
     private function unlandedRows(string $table, string $pk, int $userId, bool $pkIsHere): array
     {
-        $causes = [];
+        $groups = [];
 
         foreach ($this->rowsUnder($table, $pk, $userId) as $authors) {
-            if (! $this->landed($table, $pk, $authors, $userId, $pkIsHere)) {
-                $causes[] = $this->causeOf($table, $pk, $authors, $userId);
+            if ($this->landed($table, $pk, $authors, $userId, $pkIsHere)) {
+                continue;
             }
+
+            $groups[] = [
+                'pk' => $pk,
+                'devices' => $authors,
+                'cause' => $this->causeOf($table, $pk, $authors, $userId),
+                'naturalKey' => $this->aliases->naturalKeyOf($table, $this->payload($table, $pk, $authors, $userId, true)),
+            ];
         }
 
-        return $causes;
+        return $groups;
     }
 
     // What the absence means, asked of the log rather than of a list of table

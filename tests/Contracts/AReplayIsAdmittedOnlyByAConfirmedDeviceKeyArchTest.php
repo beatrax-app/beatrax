@@ -34,6 +34,11 @@ const CONFIRMED_KEY_REPLAY_SITES = [
     // an entry signed by a device this installation never confirmed is exactly
     // the one a rebuild must refuse rather than admit by re-reading it.
     'Modules/Sync/Commands/SyncRebuildCommand.php',
+    // The stranded-create repair takes a create out of this device's own
+    // stored log and hands it back to the applier. Nothing arrives and nothing
+    // is asked for, and an entry signed by a device this installation never
+    // confirmed is exactly the one it must refuse rather than place.
+    'Modules/Sync/Commands/SyncRepairStrandedCreatesCommand.php',
     'Modules/Sync/Internal/Transport/SyncWebSocketHandler.php',
     'Modules/Sync/Providers/SyncServiceProvider.php',
     'Modules/Sync/Public/Services/HistoryReprojector.php',

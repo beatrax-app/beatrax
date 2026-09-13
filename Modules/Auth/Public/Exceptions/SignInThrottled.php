@@ -11,8 +11,13 @@ use RuntimeException;
 // this is the one outcome that is neither a pass nor a mismatch.
 final class SignInThrottled extends RuntimeException
 {
-    public function __construct(public readonly int $secondsRemaining)
-    {
+    // recoveryCodeRejected: a code was offered as the way past the meter and
+    // did not open it. The meter stands either way — this is only which of the
+    // two sentences the screen owes the reader.
+    public function __construct(
+        public readonly int $secondsRemaining,
+        public readonly bool $recoveryCodeRejected = false,
+    ) {
         parent::__construct('Sign-in is throttled for another '.$secondsRemaining.' seconds.');
     }
 }

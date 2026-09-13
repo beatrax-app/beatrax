@@ -12,6 +12,7 @@ and what to do when something fails.
 | [verify-release.md](verify-release.md) | Verifying a downloaded release manually — SHA-256 checksum and Ed25519 manifest signature |
 | [mobile-release.md](mobile-release.md) | Building, signing and distributing the Android and iOS apps — Bifrost, the public APK, and where each credential lives |
 | [store-submission.md](store-submission.md) | What a store submission has to declare, where each answer is derived from, the review notes, and what the two desktop stores would cost |
+| [store-listing-copy.md](store-listing-copy.md) | Draft listing copy for all four stores and the download page, what makes each claim true, and the claims that had to come out |
 | [force-password-reset.md](force-password-reset.md) | Resetting a user's password from the CLI when recovery codes are exhausted |
 | [repo-security-setup.md](repo-security-setup.md) | Reproducing the GitHub repo security posture from scratch on a fork or fresh clone |
 | [signing-identities.md](signing-identities.md) | Every identity the release pipeline signs with, when each expires, and the command that reads that date |

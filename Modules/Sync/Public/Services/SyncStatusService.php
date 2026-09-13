@@ -8,6 +8,8 @@ use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Exceptions\ColumnNotDeclaredException;
+use Modules\Core\Public\Support\SchemaShape;
 use Modules\Sync\Internal\OpLog\BackfillProgress;
 use Modules\Sync\Internal\OpLog\DeferredOpCaptures;
 use Modules\Sync\Internal\OpLog\RefusedOperations;
@@ -58,9 +60,23 @@ final readonly class SyncStatusService
     // Drops every session that no confirmed device backs. A session is a
     // record of talking to a peer; once the peer is gone it is history, not
     // a device, and listing it as one is what made removal look impossible.
+    /**
+     * @throws ColumnNotDeclaredException
+     */
     public function forgetOrphanedSessions(int $userId): int
     {
-        $confirmed = $this->db->connection()
+        $connection = $this->db->connection();
+
+        // Asked before the list is built, because an empty list is this
+        // delete's whole scope and it cannot tell "no device is confirmed"
+        // from "the clause that narrows to confirmed devices never applied".
+        $missing = SchemaShape::missingColumns($connection, 'device_registry', ['confirmed_at', 'self_retired_at']);
+
+        if ($missing !== []) {
+            throw ColumnNotDeclaredException::on('device_registry', $missing);
+        }
+
+        $confirmed = $connection
             ->table('device_registry')
             ->where('user_id', $userId)
             ->whereNotNull('confirmed_at')
@@ -71,7 +87,11 @@ final readonly class SyncStatusService
             ->pluck('device_id')
             ->all();
 
-        return $this->db->connection()
+        // `when()` reads as the safety check it is not: whereNotIn on an empty
+        // set compiles to `1 = 1`, so both arms delete every session the user
+        // has. Zero confirmed devices genuinely means every session is history
+        // -- which is why the schema, not this line, is what has to be sound.
+        return $connection
             ->table('sync_sessions')
             ->where('user_id', $userId)
             ->when($confirmed !== [], fn ($query) => $query->whereNotIn('peer_device_id', $confirmed))

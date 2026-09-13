@@ -90,25 +90,7 @@ final class SyncScreen extends Component
             return;
         }
 
-        // Where this device last REACHED the desktop. The relay endpoint's
-        // host used to stand in for it, so a LAN-paired phone passed a null
-        // host, skipped the LAN leg, drained a relay it had never configured,
-        // and reported nothing.
-        $address = $peerAddress->locate($currentUser->id());
-
-        $outcome = $trigger->attempt(
-            $currentUser->id(),
-            $session,
-            $address['host'] ?? null,
-            $address['port'] ?? null,
-        );
-
-        // An address that was dialled and reached nobody is a desktop that
-        // moved or went away. Kept, every later press retries the same dead
-        // address; dropped, the next one browses for the live one.
-        if ($address !== null && $outcome === SyncAttemptOutcome::Unreachable) {
-            $peerAddress->forget($currentUser->id());
-        }
+        $outcome = $this->dialEachPeer($currentUser->id(), $trigger, $session, $devices, $peerAddress);
 
         // The outcome is kept rather than dropped — a press that changes
         // nothing on screen is indistinguishable from a sync that worked.
@@ -124,6 +106,60 @@ final class SyncScreen extends Component
         // A pairing may have completed since mount; re-read rather than
         // trusting the value the button was rendered with.
         $this->hasPeers = $devices->otherDeviceNames($currentUser->id()) !== [];
+    }
+
+    // Every confirmed peer in turn, not only the first. The phone runs no
+    // listener, so a desktop it never dials is one it never syncs with, and a
+    // household's second desktop was unreachable for as long as its first
+    // existed — asleep or not.
+    private function dialEachPeer(
+        int $userId,
+        MobileSyncTriggerService $trigger,
+        Session $session,
+        DeviceRegistryService $devices,
+        PeerLanAddress $peerAddress,
+    ): SyncAttemptOutcome {
+        $result = SyncAttemptOutcome::Unreachable;
+
+        foreach (array_keys($devices->otherDeviceNames($userId)) as $peerDeviceId) {
+            $outcome = $this->dialOnePeer($userId, $trigger, $session, $peerAddress, $peerDeviceId);
+
+            // Unreachable says the least of what a walk can end on, so a peer
+            // nothing answered for never displaces one that answered and
+            // refused — which is the line this reader needs to see.
+            $result = $outcome === SyncAttemptOutcome::Unreachable ? $result : $outcome;
+
+            if ($outcome->endsTheWalk()) {
+                break;
+            }
+        }
+
+        return $result;
+    }
+
+    private function dialOnePeer(
+        int $userId,
+        MobileSyncTriggerService $trigger,
+        Session $session,
+        PeerLanAddress $peerAddress,
+        string $peerDeviceId,
+    ): SyncAttemptOutcome {
+        // Where this device last REACHED that desktop. The relay endpoint's
+        // host used to stand in for it, so a LAN-paired phone passed a null
+        // host, skipped the LAN leg, drained a relay it had never configured,
+        // and reported nothing.
+        $dial = $peerAddress->locate($userId, $peerDeviceId);
+
+        $outcome = $trigger->attempt($userId, $session, $dial);
+
+        // An address that was dialled and reached nobody is a desktop that
+        // moved or went away. Kept, every later press retries the same dead
+        // address; dropped, the next one browses for the live one.
+        if ($dial !== null && $outcome === SyncAttemptOutcome::Unreachable) {
+            $peerAddress->forget($userId, $peerDeviceId);
+        }
+
+        return $outcome;
     }
 
     // Reads/writes NetworkPolicyResolver's file-backed policy, never a

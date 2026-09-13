@@ -5,8 +5,10 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Public\Services\UserDataPathService;
+use Modules\Mobile\Internal\Sync\PeerDial;
 use Modules\Mobile\Internal\Sync\PeerLanAddress;
 use Modules\Sync\Internal\Transport\Relay\RelayConfig;
+use Modules\Sync\Public\Services\DeviceRegistryService;
 use Modules\Sync\Public\Services\SyncPorts;
 
 uses(RefreshDatabase::class);
@@ -65,37 +67,63 @@ function rememberPeerAt(int $userId, ?string $host, ?int $port): string
 // and this class answered with the host out of a relay URL — null, on a
 // LAN-only pairing — so the manual sync opened no TCP connection at all.
 
-it('answers with the address the phone last reached the desktop at', function (): void {
-    rememberPeerAt(7, '192.168.178.119', 51337);
+it('answers with the address the phone last reached that desktop at, under its device id', function (): void {
+    $peer = rememberPeerAt(7, '192.168.178.119', 51337);
 
-    expect(peerLanAddressWithEndpoint(null)->recall(7))
-        ->toBe(['host' => '192.168.178.119', 'port' => 51337]);
+    expect(peerLanAddressWithEndpoint(null)->recall(7, $peer))
+        ->toEqual(new PeerDial($peer, '192.168.178.119', 51337));
 });
 
 it('prefers the reached address over the relay endpoint that merely names the machine', function (): void {
-    rememberPeerAt(7, '192.168.178.119', 51337);
+    $peer = rememberPeerAt(7, '192.168.178.119', 51337);
 
-    expect(peerLanAddressWithEndpoint('https://desk.local:8443/ws')->recall(7))
-        ->toBe(['host' => '192.168.178.119', 'port' => 51337]);
+    expect(peerLanAddressWithEndpoint('https://desk.local:8443/ws')->recall(7, $peer))
+        ->toEqual(new PeerDial($peer, '192.168.178.119', 51337));
+});
+
+// The whole of this class's former job was picking WHICH peer, from a read that
+// stated no order — while the Noise static key came from a second, unordered
+// read. Two desktops, two answers, and a handshake that could complete against
+// neither. The caller names the peer now, and the address comes back carrying
+// the name it was asked for.
+it('answers for the peer it was asked for, never for the other one', function (): void {
+    $studio = rememberPeerAt(7, '192.168.1.11', 51337);
+    $laptop = rememberPeerAt(7, '192.168.1.22', 51337);
+
+    $ladder = peerLanAddressWithEndpoint(null);
+
+    expect($ladder->recall(7, $studio))->toEqual(new PeerDial($studio, '192.168.1.11', 51337))
+        ->and($ladder->recall(7, $laptop))->toEqual(new PeerDial($laptop, '192.168.1.22', 51337));
+});
+
+it('forgets one peer\'s address without touching the other\'s', function (): void {
+    $studio = rememberPeerAt(7, '192.168.1.11', 51337);
+    $laptop = rememberPeerAt(7, '192.168.1.22', 51337);
+
+    $ladder = peerLanAddressWithEndpoint(null);
+    $ladder->forget(7, $studio);
+
+    expect($ladder->recall(7, $studio))->toBeNull()
+        ->and($ladder->recall(7, $laptop))->toEqual(new PeerDial($laptop, '192.168.1.22', 51337));
 });
 
 // The fallback earns its place on iOS, where LAN discovery does not work at
 // all, and immediately after a QR pairing that has reached nothing yet.
 it('falls back to the relay endpoint host when nothing was ever reached', function (): void {
-    rememberPeerAt(7, null, null);
+    $peer = rememberPeerAt(7, null, null);
 
-    expect(peerLanAddressWithEndpoint('https://desk.local:8443/ws')->recall(7))
-        ->toBe(['host' => 'desk.local', 'port' => SyncPorts::DEFAULT_PORT]);
+    expect(peerLanAddressWithEndpoint('https://desk.local:8443/ws')->recall(7, $peer))
+        ->toEqual(new PeerDial($peer, 'desk.local', SyncPorts::DEFAULT_PORT));
 });
 
 // No endpoint and nothing reached is the out-of-box state, not a failure: the
 // LAN leg is simply not attempted rather than dialled against a null host.
 it('has no address before a peer is reached or an endpoint is learned', function (): void {
-    expect(peerLanAddressWithEndpoint(null)->recall(7))->toBeNull();
+    expect(peerLanAddressWithEndpoint(null)->recall(7, rememberPeerAt(7, null, null)))->toBeNull();
 });
 
 it('has no address when the stored endpoint carries no host', function (): void {
-    expect(peerLanAddressWithEndpoint('not-a-url')->recall(7))->toBeNull();
+    expect(peerLanAddressWithEndpoint('not-a-url')->recall(7, rememberPeerAt(7, null, null)))->toBeNull();
 });
 
 // The desktop honouring SYNC_PORT while the phone dials a compiled-in 51337
@@ -103,23 +131,26 @@ it('has no address when the stored endpoint carries no host', function (): void 
 // "0 of 0 records" this class was written to fix.
 it('dials the configured sync port rather than the compiled-in default', function (): void {
     config(['sync.port' => 51999]);
+    $peer = rememberPeerAt(7, null, null);
 
-    expect(peerLanAddressWithEndpoint('https://desk.local:8443/ws')->recall(7))
-        ->toBe(['host' => 'desk.local', 'port' => 51999]);
+    expect(peerLanAddressWithEndpoint('https://desk.local:8443/ws')->recall(7, $peer))
+        ->toEqual(new PeerDial($peer, 'desk.local', 51999));
 });
 
 it('drops a remembered address on request, so the next look-up browses again', function (): void {
-    rememberPeerAt(7, '192.168.178.119', 51337);
+    $peer = rememberPeerAt(7, '192.168.178.119', 51337);
 
     $address = peerLanAddressWithEndpoint(null);
-    $address->forget(7);
+    $address->forget(7, $peer);
 
-    expect($address->recall(7))->toBeNull();
+    expect($address->recall(7, $peer))->toBeNull();
 });
 
-// An unconfirmed or self row is not a peer to dial: otherwise a phone would
-// look up its own address and call the result the desktop.
-it('ignores its own registry row when choosing whose address to answer with', function (): void {
+// An unconfirmed or self row is not a peer to dial. This class no longer picks
+// the peer, so the guarantee moved to the read its callers walk — asserted here
+// against the same fixture, so a widening of that read still fails a test that
+// names the reason.
+it('is never handed its own registry row as a peer to dial', function (): void {
     app(DatabaseManager::class)->connection()->table('device_registry')->insert([
         'user_id' => 7,
         'device_id' => 'this-phone',
@@ -137,5 +168,5 @@ it('ignores its own registry row when choosing whose address to answer with', fu
         'updated_at' => '2026-08-01T10:01:00Z',
     ]);
 
-    expect(peerLanAddressWithEndpoint(null)->recall(7))->toBeNull();
+    expect(array_keys(app(DeviceRegistryService::class)->otherDeviceNames(7)))->toBe([]);
 });

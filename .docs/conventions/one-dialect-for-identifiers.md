@@ -84,6 +84,24 @@ and splits them into words. Three properties matter:
   letters of `tyre` across the seam between `Counterparty` and `Resolver`, and a
   substring reader renames it.
 
+### The one name the token walk cannot see
+
+A Pest file **declares no class** — Pest derives the test class from the file's
+*path*. So the walk above, which reads declared identifiers, finds no name for
+it at all, and a file whose name ended `…ItDialled` + `Test.php` resolved to a
+class spelling `dialled` while every identifier inside that file was clean. The
+silence read exactly like coverage.
+
+A second reader takes the file name itself as the identifier. Measured across
+3,026 test files when it was added, it found five British names and one false
+positive: `otherwise` fits the `-ise` shape and is American, so it joined
+`pairwise` in `AMERICAN_ISE_WORDS`. Four of the five predate the reach and sit
+in modules the change adding it did not touch, so they are named in
+`BRITISH_TEST_PATH_NAMES` with the exact words each is allowed. The count is
+exact in both directions: a fifth file fails, and an entry that stops matching
+— because somebody renamed the file — fails too, so the list cannot rot into a
+blanket exemption.
+
 The irregular words are a named list, because no rule derives `labelled` from
 `label` without also deriving `controller` from `control`. The two productive
 families — `-ise/-isation/-iser` and `-our` — are matched instead, with the far
@@ -102,7 +120,9 @@ words with no idea which of them are code, so `--locale en-us` reports the
 British comments and the British copy along with everything else. Measured on
 this tree with the identifier half already converted, it returns **1,741 hits:
 870 in comments, 757 in string literals, 114 in Markdown and config prose, and
-zero in an identifier and zero in a file name** — every one of them correct.
+zero in an identifier** — every one of them correct. It reads file *contents*,
+so it never had an opinion on a file name; the five British test file names
+above went unreported by it too.
 A hundred and twelve of those strings are the guard's own list of the words it
 forbids.
 

@@ -34,11 +34,10 @@ final readonly class MobileSyncTriggerService
     // and a failed dial are both `null` here, which is why a screen reporting
     // to a reader asks attempt() instead.
     /**
-     * @param  string|null  $lanHost  The desktop peer's LAN host, when
-     *                                already known/discovered by the
-     *                                caller. Peer discovery itself is out
-     *                                of scope here.
-     * @param  int|null  $lanPort  The desktop's `sync:serve` port.
+     * @param  PeerDial|null  $lan  The confirmed peer to dial and where, when
+     *                              the caller already knows both. Choosing
+     *                              WHICH peer is the caller's, so the address
+     *                              and the key can never name two devices.
      * @return bool|null `null` when the tick was skipped (locked / no key /
      *                   sync never enabled / pause-on-cellular gate).
      *                   `true` when a sync attempt completed (LAN or
@@ -49,10 +48,9 @@ final readonly class MobileSyncTriggerService
     public function syncOnce(
         int $userId,
         Session $session,
-        ?string $lanHost = null,
-        ?int $lanPort = null,
+        ?PeerDial $lan = null,
     ): ?bool {
-        return match ($this->attempt($userId, $session, $lanHost, $lanPort)) {
+        return match ($this->attempt($userId, $session, $lan)) {
             SyncAttemptOutcome::Synced => true,
             SyncAttemptOutcome::Unreachable, SyncAttemptOutcome::NotSecured => false,
             default => null,
@@ -64,17 +62,12 @@ final readonly class MobileSyncTriggerService
     // background artisan command can call it directly outside any HTTP
     // request lifecycle.
     /**
-     * @param  string|null  $lanHost  The desktop peer's LAN host, when
-     *                                already known/discovered by the
-     *                                caller. Peer discovery itself is out
-     *                                of scope here.
-     * @param  int|null  $lanPort  The desktop's `sync:serve` port.
+     * @param  PeerDial|null  $lan  see {@see self::syncOnce()}.
      */
     public function attempt(
         int $userId,
         Session $session,
-        ?string $lanHost = null,
-        ?int $lanPort = null,
+        ?PeerDial $lan = null,
     ): SyncAttemptOutcome {
         [$state, $identity] = $this->identityLoader->loadWithState($userId, $session);
 
@@ -105,9 +98,9 @@ final readonly class MobileSyncTriggerService
         // travels over the LAN, and that leg hands over the epoch keys ahead of
         // the entries they decrypt. Draining first put a round-trip to a remote
         // host in front of every tick a peer on this network could have served.
-        $lan = $lanHost !== null && $lanPort !== null
-            ? $this->dialLanWithBoundedRetry($lanHost, $lanPort, $identity, $session)
-            : LanDialOutcome::NotReached;
+        $lanOutcome = $lan === null
+            ? LanDialOutcome::NotReached
+            : $this->dialLanWithBoundedRetry($lan, $identity, $session);
 
         // Then the relay, whether or not the LAN answered: it is a fallback in
         // ORDER, not in whether it runs. It carries no ops — only epoch wraps —
@@ -126,7 +119,7 @@ final readonly class MobileSyncTriggerService
         // had nothing to retire it once setup was over.
         $this->recoverHeldEntries($userId, $session);
 
-        return self::settle($lan, $relayReached);
+        return self::settle($lanOutcome, $relayReached);
     }
 
     // A peer that answered and refused the handshake is reported apart from one
@@ -161,13 +154,13 @@ final readonly class MobileSyncTriggerService
     // the iOS Local Network Privacy first-attempt denial, which the OS prompt
     // may resolve between the two. A peer that answered and refused is not made
     // reachable by asking again, and a second ask would lose which it was.
-    private function dialLanWithBoundedRetry(string $host, int $port, DeviceIdentityDto $identity, Session $session): LanDialOutcome
+    private function dialLanWithBoundedRetry(PeerDial $dial, DeviceIdentityDto $identity, Session $session): LanDialOutcome
     {
         try {
-            $first = $this->lanSyncClient->syncOnce($host, $port, $identity, $session);
+            $first = $this->lanSyncClient->syncOnce($dial, $identity, $session);
 
             return $first === LanDialOutcome::NotReached
-                ? $this->lanSyncClient->syncOnce($host, $port, $identity, $session)
+                ? $this->lanSyncClient->syncOnce($dial, $identity, $session)
                 : $first;
         } catch (LanSyncException $e) {
             // This device's own gate refusing the peer is a verification

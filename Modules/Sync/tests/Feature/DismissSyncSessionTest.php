@@ -3,7 +3,10 @@
 declare(strict_types=1);
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Exceptions\ColumnNotDeclaredException;
 use Modules\Sync\Public\Enums\SyncOverallStatus;
 use Modules\Sync\Public\Services\SyncStatusService;
 
@@ -120,4 +123,67 @@ it('ignores an empty device id rather than deleting the whole list', function ()
     $status->forgetSession($userId, '');
 
     expect($status->peerStatuses($userId))->toHaveCount(1);
+});
+
+// The window this delete is dangerous in. SQLite reads a double-quoted name
+// matching no column as a string literal, so `whereNull('self_retired_at')` is
+// false for every row while that migration has not run: the confirmed list
+// comes back empty and `whereNotIn` on an empty set compiles to `1 = 1`.
+it('refuses to sweep while it cannot tell which devices are confirmed', function (): void {
+    $db = app(DatabaseManager::class);
+    $userId = dismissUser('dismiss-unmigrated');
+
+    dismissConfirmedDevice($db, $userId, 'live-peer');
+    dismissSession($db, $userId, 'live-peer', 'active');
+
+    Schema::table('device_registry', fn (Blueprint $table) => $table->dropColumn('self_retired_at'));
+
+    /** @var SyncStatusService $status */
+    $status = app(SyncStatusService::class);
+
+    expect(fn () => $status->forgetOrphanedSessions($userId))
+        ->toThrow(ColumnNotDeclaredException::class);
+});
+
+// The consequence, pinned apart from the refusal that prevents it. Without the
+// schema question this deletes the live session too -- the whole list, scoped
+// by user_id alone -- so the row count is the assertion that has to stand on
+// its own rather than behind an expectation about an exception.
+it('leaves a live session standing while it cannot tell which devices are confirmed', function (): void {
+    $db = app(DatabaseManager::class);
+    $userId = dismissUser('dismiss-unmigrated-keeps');
+
+    dismissConfirmedDevice($db, $userId, 'live-peer');
+    dismissSession($db, $userId, 'live-peer', 'active');
+
+    Schema::table('device_registry', fn (Blueprint $table) => $table->dropColumn('self_retired_at'));
+
+    /** @var SyncStatusService $status */
+    $status = app(SyncStatusService::class);
+
+    try {
+        $status->forgetOrphanedSessions($userId);
+    } catch (ColumnNotDeclaredException) {
+        // The refusal is the sibling test's subject. What matters here is that
+        // nothing was deleted on the way to it.
+    }
+
+    expect($status->peerStatuses($userId))->toHaveCount(1, 'an unscoped delete would have taken this row');
+});
+
+// Zero confirmed devices is a real state and every session really is history
+// there, so the empty case still deletes. Refusing it would put back the defect
+// this method was written for: rows nothing could clear.
+it('still sweeps every session when no device is confirmed and the schema says so', function (): void {
+    $db = app(DatabaseManager::class);
+    $userId = dismissUser('dismiss-none-confirmed');
+
+    dismissSession($db, $userId, 'removed-peer-a', 'failed');
+    dismissSession($db, $userId, 'removed-peer-b', 'closed');
+
+    /** @var SyncStatusService $status */
+    $status = app(SyncStatusService::class);
+
+    expect($status->forgetOrphanedSessions($userId))->toBe(2)
+        ->and($status->peerStatuses($userId))->toBe([]);
 });
