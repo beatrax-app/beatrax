@@ -10,6 +10,7 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Services\SessionFactory;
 use Modules\Core\Public\Support\EditDistance;
+use Modules\Ledger\Public\Support\NewestTransactionFirst;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 // Suggests one "did you mean" word (edit distance <= 2, no spellfix1 in
@@ -100,15 +101,23 @@ final readonly class DidYouMeanSuggester
     {
         return $this->db->connection()
             ->table('transactions')
-            ->where('user_id', $user->id)
+            ->join(
+                'accounts as '.NewestTransactionFirst::ACCOUNT,
+                NewestTransactionFirst::ACCOUNT.'.id',
+                '=',
+                'transactions.account_id',
+            )
+            ->where('transactions.user_id', $user->id)
             // No `!= ''` beside it: sealed values are never the empty string,
             // so that half of the filter admitted every row once the column
             // was encrypted. buildCorpus() refuses a blank of either kind.
-            ->whereNotNull('counterparty_name')
-            ->orderByDesc('posted_at')
-            ->orderByDesc('id')
+            ->whereNotNull('transactions.counterparty_name')
+            // The cap decides which 2 000 names the corpus is built from, so
+            // the tie under a DATE column decides what the spelling suggestion
+            // is offered out of — and `id` is counted per device.
+            ->orderByRaw(NewestTransactionFirst::ACROSS_ACCOUNTS)
             ->limit(self::CANDIDATE_ROW_CAP)
-            ->pluck('counterparty_name');
+            ->pluck('transactions.counterparty_name');
     }
 
     /**

@@ -41,7 +41,6 @@ Modules/Counterparties/
 │   ├── Pipeline/
 │   │   └── ResolveCounterpartyStage.php
 │   ├── Support/
-│   │   ├── NewestTransactionFirst.php
 │   │   └── RollingTwelveMonths.php
 │   └── Http/Livewire/
 │       ├── CounterpartyIndex.php
@@ -186,11 +185,18 @@ Modules/Counterparties/
 - `Internal/Pipeline/ResolveCounterpartyStage` — pipeline glue. Calls
   the resolver, stamps `counterpartyId` via `withCounterpartyId()`,
   no-ops on `null` or `self_account` DTOs. Emits no events of its own.
-- `Internal/Support/NewestTransactionFirst::ACROSS_ACCOUNTS` — the one
-  ORDER BY both transaction reads in this module use. `transactions.id`
-  is a per-device autoincrement, so the charge it called newest was a
-  different charge on the peer; see
-  [which charge is the newest](architecture.md#which-charge-is-the-newest).
+- `Ledger\Public\Support\NewestTransactionFirst::ACROSS_ACCOUNTS` — the
+  one ORDER BY all **four** transaction reads in this module use:
+  `CounterpartyTriageQueue::suggestionFor()`,
+  `CounterpartyIndexQuery::recentRowByCounterparty()`,
+  `CounterpartyProfileQuery::recentActivity()` and
+  `CounterpartyTriage::recentTransactionsFor()`. It moved to `Ledger` —
+  which owns `transactions` — once `Search` and `Import` needed it too
+  and the module boundary refused them an `Internal` import.
+  `transactions.id` is a per-device autoincrement, so the charge it
+  called newest was a different charge on the peer; see
+  [which charge is the newest](architecture.md#which-charge-is-the-newest)
+  and [an ordering that picks](../../architecture/an-ordering-that-picks.md).
 - `Internal/Http/Livewire/CounterpartyIndex` — `/counterparties`.
   Per-type chip filter + search; persists view preference via
   `user_preferences.counterparty_index_view`.

@@ -627,7 +627,12 @@ that a user still wants to name.
 probe: a debounced Settings → Aliases live input walks the user's most
 recent 500 transactions (bounded by design — a full-history scan on
 every keystroke would saturate SQLite WAL contention) and returns the
-total match count plus the first five rows. Matching runs in PHP via
+total match count plus the first five rows. The cut decides *which* 500,
+so the order it takes them in is
+`Ledger\Public\Support\NewestTransactionFirst::ACROSS_ACCOUNTS` and not
+`posted_at, id`: the id is counted per device, and the reader decides on
+the match count —
+[an ordering that picks](../../architecture/an-ordering-that-picks.md). Matching runs in PHP via
 `mb_strpos`/`mb_strtolower`, never SQL `LIKE`, mirroring the
 Categorization `RuleEvaluator` defence so a user-authored pattern never
 enters the SQL string. Patterns under three characters are rejected
@@ -1024,6 +1029,34 @@ than Import (e.g. `Modules\OpenBanking`) can drive the pipeline, since
   point-in-time balance) instead of `preview()`.
 - Per-row duplicate detection is still enforced downstream by
   `FingerprintStage`, independent of this dedup layer.
+
+## The stored path is an audit string
+
+`import_runs.raw_file_path` reads like a handle and is not one. Two
+things are true of it that a caller reaching for `fopen()` has to know:
+
+- **It travels.** `MergeRulesRegistry` lists it in the create set for
+  `import_runs`, so the value a device reads back may have been written
+  by a peer, against a filesystem this device has never seen. A path
+  that resolves on both machines therefore names *this* reader's file
+  at the peer's choosing.
+- **It is not always a path.** Five writers put a marker there for a run
+  nobody uploaded: `open-banking://{key}` for a fetched window,
+  `demo://…` from the sample-data seeders, `'migration'` from
+  `PromoteStagingToDomain`, the manual-entry anchor, and the receipts
+  handoff sentinel.
+
+So every re-read asks `StagedStatementPath::forRun()`, which answers
+with an absolute path only when `realpath()` of the stored string lands
+inside this device's own `imports/{userId}/` directory, and with `null`
+otherwise. `RunsImports::runFromStagedRun()` is the one seam that reads
+the column; `ASyncedPathIsOnlyOpenedWhereItIsProvenLocalArchTest` pins
+that it stays the only one.
+
+A `null` is not an error. Naming an account on a run this device did not
+stage writes the account and skips the re-preview — the same answer the
+remote-fetch branch has always given, because in both cases there is no
+local file whose rows could be read again.
 
 ## Applying enrichments
 
