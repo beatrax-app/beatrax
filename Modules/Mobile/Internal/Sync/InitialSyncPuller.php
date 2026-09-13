@@ -41,12 +41,8 @@ final readonly class InitialSyncPuller
     /**
      * @return array{records_applied: int, records_expected: ?int, percent: int, phase: SyncPhase, blocked: ?SyncBlockedReason, withheld: int}
      */
-    public function pull(
-        int $userId,
-        Session $session,
-        ?string $lanHost = null,
-        ?int $lanPort = null,
-    ): array {
+    public function pull(int $userId, Session $session): array
+    {
         $identity = $this->identityLoader->load($userId, $session);
 
         // A locked app-lock also returns a null identity, and reporting that as
@@ -79,7 +75,7 @@ final readonly class InitialSyncPuller
             return $this->toProgressArray($cursor, $this->withheld->totalFor($userId));
         }
 
-        return $this->advance($userId, $session, $peerDeviceId, $cursor, $lanHost, $lanPort);
+        return $this->advance($userId, $session, $peerDeviceId, $cursor);
     }
 
     /**
@@ -91,20 +87,16 @@ final readonly class InitialSyncPuller
         Session $session,
         string $peerDeviceId,
         array $cursor,
-        ?string $lanHost,
-        ?int $lanPort,
     ): array {
-        // The caller's address comes from a scanned QR's relay endpoint and is
-        // null for every other road in. Resolving it here instead is what makes
-        // the typed-code arm work at all: this is the first point that knows
-        // WHICH device to look for, so the browse can be aimed and remembered.
-        if ($lanHost === null) {
-            $located = $this->addresses->locate($userId, $peerDeviceId);
-            $lanHost = $located['host'] ?? null;
-            $lanPort = $located['port'] ?? $lanPort;
-        }
+        // Resolved here and nowhere else. A caller-supplied address named no
+        // device, so a screen that recalled one peer's address handed it to a
+        // pull aimed at another — the typed-code arm works because this is the
+        // point that knows WHICH device to look for.
+        $located = $this->addresses->locate($userId, $peerDeviceId);
 
-        $result = $this->trigger->syncOnce($userId, $session, $lanHost, $lanPort);
+        $result = $this->trigger->syncOnce($userId, $session, $located === null
+            ? null
+            : new PeerDial($peerDeviceId, $located['host'], $located['port']));
 
         // Written by the exchange that just ran, or left standing by the last
         // one: what a peer is holding back for an author this device cannot

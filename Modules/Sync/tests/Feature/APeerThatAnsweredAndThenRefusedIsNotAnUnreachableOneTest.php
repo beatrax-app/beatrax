@@ -9,6 +9,7 @@ use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
 use Modules\Mobile\Internal\Sync\MobileSyncTriggerService;
+use Modules\Mobile\Internal\Sync\PeerDial;
 use Modules\Mobile\Internal\Sync\SyncAttemptOutcome;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Revolt\EventLoop;
@@ -160,11 +161,12 @@ it('does not read a peer that answered and then refused the handshake as one it 
     $answered = null;
 
     withAPeerThatUpgradesThenHangsUp(function (int $port) use ($userId, $session, &$answered): void {
-        $answered = app(MobileSyncTriggerService::class)->attempt($userId, $session, '127.0.0.1', $port);
+        $answered = app(MobileSyncTriggerService::class)
+            ->attempt($userId, $session, new PeerDial('desktop-that-answers', '127.0.0.1', $port));
     });
 
     $neverReached = app(MobileSyncTriggerService::class)
-        ->attempt($userId, $session, '127.0.0.1', aPortNothingIsListeningOn());
+        ->attempt($userId, $session, new PeerDial('desktop-that-answers', '127.0.0.1', aPortNothingIsListeningOn()));
 
     expect($answered)->toBe(SyncAttemptOutcome::NotSecured);
     expect($neverReached)->toBe(SyncAttemptOutcome::Unreachable);
@@ -179,7 +181,7 @@ it('still reads a peer nothing answered for as unreachable', function (): void {
     [$userId, $session] = answeringPeerPhone();
 
     $outcome = app(MobileSyncTriggerService::class)
-        ->attempt($userId, $session, '127.0.0.1', aPortNothingIsListeningOn());
+        ->attempt($userId, $session, new PeerDial('desktop-that-answers', '127.0.0.1', aPortNothingIsListeningOn()));
 
     expect(Lang::get('mobile::sync.result.'.$outcome->value))
         ->toBe(Lang::get('mobile::sync.result.unreachable'));

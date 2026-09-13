@@ -68,9 +68,12 @@ trait ManagesManualPeerAddress
         $this->manualPeerFlashMessage = Lang::get('sync::devices.flash.manual_peer_saved');
     }
 
-    // One peer, matching what the dial itself assumes: PeerLanAddress reads the
-    // first other device and no other, so a second one here would offer a
-    // reader an address nothing would ever dial.
+    // One peer, and no longer because the dial can only use one: the phone
+    // walks every confirmed peer now. A second address entry needs a surface
+    // that names which desktop it is for, which this section does not have.
+    /**
+     * @link ../../../../../../.docs/features/mobile/dialing-the-peer-this-address-belongs-to.md#what-this-does-not-cover
+     */
     private function firstPeerDeviceId(DeviceRegistryService $registry, int $userId): ?string
     {
         return array_key_first($registry->otherDeviceNames($userId));

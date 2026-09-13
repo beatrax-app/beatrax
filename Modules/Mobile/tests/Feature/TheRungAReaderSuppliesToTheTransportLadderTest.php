@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Core\Models\User;
+use Modules\Mobile\Internal\Sync\PeerDial;
 use Modules\Mobile\Internal\Sync\PeerLanAddress;
 use Modules\Sync\Public\Services\PeerLanAddressBook;
 
@@ -50,7 +51,7 @@ beforeEach(function (): void {
 it('dials what a reader typed when discovery has nothing remembered', function (): void {
     $this->book->setManual($this->userId, $this->peer, '10.1.2.3', 8100);
 
-    expect($this->ladder->recall($this->userId))->toBe(['host' => '10.1.2.3', 'port' => 8100]);
+    expect($this->ladder->recall($this->userId, $this->peer))->toEqual(new PeerDial($this->peer, '10.1.2.3', 8100));
 });
 
 it('prefers where the peer was last reached over what a reader typed', function (): void {
@@ -59,7 +60,7 @@ it('prefers where the peer was last reached over what a reader typed', function 
 
     // Discovery first is the order the requirement names, and the better one:
     // a remembered address is where this device actually reached the peer.
-    expect($this->ladder->recall($this->userId))->toBe(['host' => '192.168.1.20', 'port' => 8100]);
+    expect($this->ladder->recall($this->userId, $this->peer))->toEqual(new PeerDial($this->peer, '192.168.1.20', 8100));
 });
 
 it('keeps the typed address when a failed dial forgets the discovered one', function (): void {
@@ -70,7 +71,7 @@ it('keeps the typed address when a failed dial forgets the discovered one', func
     // erases alongside the address that failed is not a fallback at all.
     $this->book->forget($this->userId, $this->peer);
 
-    expect($this->ladder->recall($this->userId))->toBe(['host' => '10.1.2.3', 'port' => 8100]);
+    expect($this->ladder->recall($this->userId, $this->peer))->toEqual(new PeerDial($this->peer, '10.1.2.3', 8100));
 });
 
 it('has nothing to offer once the reader clears it', function (): void {
@@ -78,5 +79,5 @@ it('has nothing to offer once the reader clears it', function (): void {
     $this->book->setManual($this->userId, $this->peer, null, null);
 
     expect($this->book->manual($this->userId, $this->peer))->toBeNull();
-    expect($this->ladder->recall($this->userId))->toBeNull();
+    expect($this->ladder->recall($this->userId, $this->peer))->toBeNull();
 });

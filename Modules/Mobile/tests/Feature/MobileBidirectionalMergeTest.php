@@ -9,6 +9,7 @@ use Modules\Auth\Public\Services\AppLockKeyService;
 use Modules\Auth\Public\Testing\AppLockTestHarness;
 use Modules\Core\Models\User;
 use Modules\Mobile\Internal\Sync\MobileSyncTriggerService;
+use Modules\Mobile\Internal\Sync\PeerDial;
 use Modules\Sync\Internal\Identity\DeviceIdentityService;
 use Modules\Sync\Internal\Merge\OpLogReplayer;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
@@ -170,7 +171,7 @@ it('MobileSyncTriggerService::syncOnce() skips cleanly — no data write, no key
     /** @var MobileSyncTriggerService $trigger */
     $trigger = app(MobileSyncTriggerService::class);
 
-    $result = $trigger->syncOnce((int) $user->id, $session, lanHost: '127.0.0.1', lanPort: 51337);
+    $result = $trigger->syncOnce((int) $user->id, $session, new PeerDial('desktop-peer', '127.0.0.1', 51337));
 
     expect($result)->toBeNull('syncOnce() must report a SKIPPED tick (null), never true/false, when no KEK is available.');
 

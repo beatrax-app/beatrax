@@ -2567,6 +2567,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Mobile/tests/Feature/TheLocalNetworkIsTriedBeforeTheRelayTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',
         'Modules/Mobile/tests/Feature/TheLocalNetworkIsTriedBeforeTheRelayTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayConfig',
         'Modules/Mobile/tests/Feature/ThePhoneDerivesItsNotificationsFromARequestTest.php -> Modules\\Notifications\\Internal\\Http\\Middleware\\RunDeferredNotificationPasses',
+        'Modules/Mobile/tests/Feature/ThePhoneOffersTheKeyOfTheDesktopItDialledTest.php -> Modules\\Sync\\Internal\\Identity\\DeviceIdentityService',
         // ForgetsSpentRecoveryCodes is the Auth middleware whose forgetting this
         // test exists to prove, and a middleware is named by class or not at all.
         // EnsureDatabaseReady is switched off the way three sibling Mobile tests
@@ -2639,6 +2640,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Search/tests/Feature/SearchEncryptionFallbackTest.php -> Modules\\Counterparties\\Internal\\Resolver\\CounterpartyResolverService',
         'Modules/Shell/tests/Feature/TheSampleDataControlSealsWhatTheRegistrySealsTest.php -> Modules\\Sync\\Internal\\Crypto\\SensitiveFieldRegistry',
         'Modules/Sync/tests/Feature/APeerThatAnsweredAndThenRefusedIsNotAnUnreachableOneTest.php -> Modules\\Mobile\\Internal\\Sync\\MobileSyncTriggerService',
+        'Modules/Sync/tests/Feature/APeerThatAnsweredAndThenRefusedIsNotAnUnreachableOneTest.php -> Modules\\Mobile\\Internal\\Sync\\PeerDial',
         'Modules/Sync/tests/Feature/APeerThatAnsweredAndThenRefusedIsNotAnUnreachableOneTest.php -> Modules\\Mobile\\Internal\\Sync\\SyncAttemptOutcome',
         'Modules/Sync/tests/Feature/APrunedNotificationIsRetiredOnThePeerTooTest.php -> Modules\\Notifications\\Internal\\Jobs\\PruneNotificationsJob',
         'Modules/Sync/tests/Feature/DuplicateReminderConvergenceTest.php -> Modules\\Notifications\\Internal\\Support\\DeterministicKeyDeriver',

@@ -32,4 +32,16 @@ enum SyncAttemptOutcome: string
     case Unreadable = 'unreadable';
 
     case PausedOnCellular = 'paused_on_cellular';
+
+    // Whether a walk over the confirmed peers learns anything from the next
+    // one. A sync happened, or the answer was about THIS device rather than
+    // that peer — an identity that will not open, a policy gate — and every
+    // remaining peer answers it the same way.
+    public function endsTheWalk(): bool
+    {
+        return match ($this) {
+            self::Unreachable, self::NotSecured => false,
+            self::Synced, self::Locked, self::NotEnabled, self::Unreadable, self::PausedOnCellular => true,
+        };
+    }
 }
