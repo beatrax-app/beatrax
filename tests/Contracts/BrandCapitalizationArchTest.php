@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Support\PatternScan;
+use Tests\Contracts\Support\RepoTree;
 
 /**
  * The product name is written "Beatrax" in prose, mid-sentence included.
@@ -75,6 +76,11 @@ function brandScannedFiles(): array
             continue;
         }
         if (str_starts_with(str_replace(base_path().'/', '', $path), BRAND_FROZEN_MOCKUPS)) {
+            continue;
+        }
+        // A second checkout of this repository at another commit, which is not
+        // this checkout's code: its offences are ones no reviewer here can fix.
+        if (str_contains($path, RepoTree::NESTED_WORKTREE)) {
             continue;
         }
         foreach ($extensions as $extension) {
