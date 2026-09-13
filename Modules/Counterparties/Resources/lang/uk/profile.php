@@ -51,7 +51,7 @@ return [
     'merchant' => [
         'categories' => 'Категорії',
 
-        'categories_empty_html' => 'Поки немає категорій — транзакції без категорії з’являються в розділі <a href="/categorization" style="color: var(--color-text); text-decoration: underline;">Категоризація</a>.',
+        'categories_empty_html' => 'Поки немає категорій — транзакції без категорії з’являються в розділі <a href=":url" style="color: var(--color-text); text-decoration: underline;">Категоризація</a>.',
         'no_recurring' => 'Регулярних патернів не виявлено.',
         'per_month_suffix' => '/міс.',
         'funding_chain' => 'Ланцюг фінансування',

@@ -51,7 +51,7 @@ return [
     'merchant' => [
         'categories' => 'Kategorie',
 
-        'categories_empty_html' => 'Zatím žádné kategorie — transakce bez kategorie najdeš v sekci <a href="/categorization" style="color: var(--color-text); text-decoration: underline;">Kategorizace</a>.',
+        'categories_empty_html' => 'Zatím žádné kategorie — transakce bez kategorie najdeš v sekci <a href=":url" style="color: var(--color-text); text-decoration: underline;">Kategorizace</a>.',
         'no_recurring' => 'Nebyly zjištěny žádné opakované vzorce.',
         'per_month_suffix' => '/měs.',
         'funding_chain' => 'Řetězec financování',

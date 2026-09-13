@@ -51,7 +51,7 @@ return [
     'merchant' => [
         'categories' => 'Kategóriák',
 
-        'categories_empty_html' => 'Még nincs kategória — a kategorizálatlan tranzakciók a <a href="/categorization" style="color: var(--color-text); text-decoration: underline;">Kategorizálás</a> oldalon jelennek meg.',
+        'categories_empty_html' => 'Még nincs kategória — a kategorizálatlan tranzakciók a <a href=":url" style="color: var(--color-text); text-decoration: underline;">Kategorizálás</a> oldalon jelennek meg.',
         'no_recurring' => 'Nem található ismétlődő minta.',
         'per_month_suffix' => '/hó',
         'funding_chain' => 'Fedezeti lánc',

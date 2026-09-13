@@ -51,7 +51,7 @@ return [
     'merchant' => [
         'categories' => 'Κατηγορίες',
 
-        'categories_empty_html' => 'Δεν υπάρχουν ακόμη κατηγορίες — οι συναλλαγές χωρίς κατηγορία εμφανίζονται στην <a href="/categorization" style="color: var(--color-text); text-decoration: underline;">Κατηγοριοποίηση</a>.',
+        'categories_empty_html' => 'Δεν υπάρχουν ακόμη κατηγορίες — οι συναλλαγές χωρίς κατηγορία εμφανίζονται στην <a href=":url" style="color: var(--color-text); text-decoration: underline;">Κατηγοριοποίηση</a>.',
         'no_recurring' => 'Δεν εντοπίστηκαν επαναλαμβανόμενα μοτίβα.',
         'per_month_suffix' => '/μήνα',
         'funding_chain' => 'Αλυσίδα χρηματοδότησης',

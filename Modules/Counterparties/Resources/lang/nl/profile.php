@@ -50,7 +50,7 @@ return [
 
     'merchant' => [
         'categories' => 'Categorieën',
-        'categories_empty_html' => 'Nog geen categorieën — niet-gecategoriseerde transacties verschijnen in <a href="/categorization" style="color: var(--color-text); text-decoration: underline;">Categorisatie</a>.',
+        'categories_empty_html' => 'Nog geen categorieën — niet-gecategoriseerde transacties verschijnen in <a href=":url" style="color: var(--color-text); text-decoration: underline;">Categorisatie</a>.',
         'no_recurring' => 'Geen terugkerende patronen gevonden.',
         'per_month_suffix' => '/mnd',
         'funding_chain' => 'Financieringsketen',

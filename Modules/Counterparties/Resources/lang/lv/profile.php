@@ -51,7 +51,7 @@ return [
     'merchant' => [
         'categories' => 'Kategorijas',
 
-        'categories_empty_html' => 'Vēl nav kategoriju — darījumi bez kategorijas ir redzami sadaļā <a href="/categorization" style="color: var(--color-text); text-decoration: underline;">Kategorizēšana</a>.',
+        'categories_empty_html' => 'Vēl nav kategoriju — darījumi bez kategorijas ir redzami sadaļā <a href=":url" style="color: var(--color-text); text-decoration: underline;">Kategorizēšana</a>.',
         'no_recurring' => 'Regulāri modeļi nav atklāti.',
         'per_month_suffix' => '/mēn.',
         'funding_chain' => 'Finansējuma ķēde',

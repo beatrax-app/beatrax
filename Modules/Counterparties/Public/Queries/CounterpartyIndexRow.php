@@ -48,8 +48,10 @@ final readonly class CounterpartyIndexRow
         $this->avgPerMonthFormatted = Money::ofMinor(abs($avgPerMonthMinor), $currency)->format();
 
         $urls = Container::getInstance()->make(UrlGenerator::class);
+        // A self-account goes to the same profile as every other type: the
+        // route it used to name has never existed, and CounterpartyProfile
+        // already renders a SelfAccount tab for exactly this slug.
         $this->href = match ($type) {
-            CounterpartyType::SelfAccount->value => '/accounts/'.$slug,
             CounterpartyType::Unknown->value => Destination::Triage->urlFrom($urls, ['queue_first' => $id]),
             default => $urls->route('counterparties.profile', ['slug' => $slug]),
         };

@@ -51,7 +51,7 @@ return [
     'merchant' => [
         'categories' => 'Kategooriad',
 
-        'categories_empty_html' => 'Kategooriaid veel pole — kategoriseerimata tehingud leiad jaotisest <a href="/categorization" style="color: var(--color-text); text-decoration: underline;">Kategoriseerimine</a>.',
+        'categories_empty_html' => 'Kategooriaid veel pole — kategoriseerimata tehingud leiad jaotisest <a href=":url" style="color: var(--color-text); text-decoration: underline;">Kategoriseerimine</a>.',
         'no_recurring' => 'Korduvaid mustreid ei tuvastatud.',
         'per_month_suffix' => '/kuus',
         'funding_chain' => 'Rahastusahel',
