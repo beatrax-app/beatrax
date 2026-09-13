@@ -9,7 +9,6 @@ return [
 
     'edit_display_name' => 'Muuda kuvatavat nime',
 
-    'hero_net_received' => 'Neto laekunud',
     'hero_12mo_total' => '12 kuu kogusumma',
     'hero_transactions' => 'Tehingud',
     'hero_first_seen' => 'Esmakordselt nähtud',

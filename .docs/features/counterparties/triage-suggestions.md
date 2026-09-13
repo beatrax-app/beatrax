@@ -166,17 +166,20 @@ formatting, only to stop discarding what the row already carries.
 
 `abs()` elsewhere in this module is **correct and must not be swept**:
 `CounterpartyIndexRow.php:47-48` and
-`counterparty-profile.blade.php:58` wrap 12-month totals and per-month
+`counterparty-profile.blade.php:71` wrap 12-month totals and per-month
 averages, where "total spent with this counterparty" as a magnitude is
-the intended presentation, and `counterparty-index.blade.php:265` sizes
+the intended presentation, and `counterparty-index.blade.php:275` sizes
 a chart bar, which cannot be negative. The rule is the distinction: an
 aggregate may be shown as a magnitude, a single transaction may not.
 
-A magnitude that nothing else reports the direction of is readable; a
-magnitude beside a colour that reports it is not, and the index phone
-list was the second of those. It keeps the `abs()` and says the
-direction in a word — [how, and why only that one
-rendering](architecture.md#the-phone-list-is-the-one-rendering-that-says-which-way-the-total-went).
+A magnitude that nothing else reports the direction of is readable. A
+magnitude beside something that reports it wrongly is not, and the
+`abs()` is what makes that unfalsifiable: the index phone list put the
+direction in a colour alone, and the card and the profile hero put it in
+a word picked by the counterparty's type rather than by the sign. All
+three keep the `abs()` and take the direction from `total12mMinor` —
+[which surfaces say it, and which say
+nothing](architecture.md#what-says-which-way-the-total-went-and-what-must-not-claim-it).
 
 ## What the user does with it
 

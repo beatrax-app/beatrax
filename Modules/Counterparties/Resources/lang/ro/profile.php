@@ -9,7 +9,6 @@ return [
 
     'edit_display_name' => 'Editează numele afișat',
 
-    'hero_net_received' => 'Net încasat',
     'hero_12mo_total' => 'Total pe 12 luni',
     'hero_transactions' => 'Tranzacții',
     'hero_first_seen' => 'Prima apariție',

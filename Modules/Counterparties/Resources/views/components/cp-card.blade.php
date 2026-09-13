@@ -3,8 +3,9 @@
 {{--
     Counterparty card — the grid item on the `/counterparties` cards
     view. Surfaces the counterparty's name, type chip, headline stat
-    (12-month total or Net received for personal), 12-month sparkline,
-    and up to two recent activity lines.
+    (the 12-month total, labelled by the direction it went for a
+    personal contact), 12-month sparkline, and up to two recent
+    activity lines.
 
     Unknown counterparties render in the dashed-border `.unknown`
     variant and surface the "❋ Label this counterparty" CTA inline at
