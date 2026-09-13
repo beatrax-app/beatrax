@@ -9,7 +9,6 @@ return [
 
     'edit_display_name' => 'Змінити відображувану назву',
 
-    'hero_net_received' => 'Чисті надходження',
     'hero_12mo_total' => 'Разом за 12 місяців',
     'hero_transactions' => 'Транзакції',
     'hero_first_seen' => 'Уперше помічено',

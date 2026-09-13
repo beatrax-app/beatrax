@@ -61,7 +61,6 @@ return [
     'error_pin_digits' => 'PIN musí mít :min až :max číslic — pouze číslice.',
     'error_pin_mismatch' => 'PINy se neshodují. Zkus to znovu.',
     'error_pin_required' => 'Zadej svůj PIN.',
-    'error_pin_incorrect' => 'Nesprávný PIN.',
     'error_account_password_required' => 'Zadej své heslo k účtu.',
     'error_account_password' => 'Nesprávné heslo k účtu.',
     'change_pin_success' => 'Tvůj šifrovací klíč je znovu zabezpečený novým PINem.',

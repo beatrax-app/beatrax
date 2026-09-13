@@ -300,6 +300,33 @@ key. `StoredCopy::keyOf()` and `::names()` answer which line a stored value
 names without rendering it, so a query or a test can narrow to the rows the app
 itself wrote without any caller learning the envelope's shape.
 
+### The envelope is not a trust boundary
+
+`StoredCopy::read()` tells a spec from the user's own words by how the value
+*starts*, and its comment says why: no sentence a person writes begins
+`{"@copy":`. That holds for a person typing into a form. It does not hold for a
+column whose writer copies a string out of somewhere else.
+
+`known_senders.label` is written two ways. The seeder packs a spec; promoting a
+discovered sender writes the **From display name** of a piece of mail, verbatim,
+and the row it lands in travels to every paired device. The envelope is public
+bytes and nothing signs it, so a sender who wrote their display name as one had
+the reader's own device render any shipped line, in the reader's own language,
+with parameters of the sender's choosing.
+
+So the value may not decide. `KnownSenderQuery` reads the label as a spec only
+where `known_senders.source` is `system` — a column a CHECK trigger pair holds
+to `system` or `user`, which the seeder sets and `PromoteDiscoveredSender` never
+does, and which a create arriving over sync does not carry at all (it takes the
+column default, `user`).
+
+`AStoredSentenceIsReadBackOnlyWhereTheRowSaysWeWroteItArchTest` keeps the census:
+every `StoredCopy::read()` site names what outside the value proves the app wrote
+it. `migration_staging_unmapped_items.display_label` is the one still ungated —
+it has no such column, and `ActualParser` writes two labels straight off the
+reader's Actual file — and the baseline of ungated sites is a ratchet that may
+fall and may not rise.
+
 ### Packed in, or riding beside
 
 Packing the envelope into the column is only safe where **an older build would

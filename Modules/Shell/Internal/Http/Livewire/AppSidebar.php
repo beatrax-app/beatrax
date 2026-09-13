@@ -19,6 +19,7 @@ use Modules\Core\Public\Services\NavCountsService;
 use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Core\Public\Support\Lang;
 use Modules\Counterparties\Public\Queries\CounterpartyTriageQueue;
+use Modules\Shell\Public\Navigation\AppNavigation;
 
 final class AppSidebar extends Component
 {
@@ -69,6 +70,7 @@ final class AppSidebar extends Component
 
         return $views->make('shell::livewire.app-sidebar', [
             'currentPath' => '/'.ltrim($request->path(), '/'),
+            'activeDestination' => AppNavigation::active('/'.ltrim($request->path(), '/'), $request->query->all()),
             'username' => $user->username,
             'userInitial' => $this->initialFor($user->username),
             'isDeveloper' => $isDeveloper,

@@ -61,7 +61,6 @@ return [
     'error_pin_digits' => 'PIN must be :min to :max digits — numbers only.',
     'error_pin_mismatch' => 'PINs don\'t match. Try again.',
     'error_pin_required' => 'Enter your PIN.',
-    'error_pin_incorrect' => 'Incorrect PIN.',
     'error_account_password_required' => 'Enter your account password.',
     'error_account_password' => 'Incorrect account password.',
     'change_pin_success' => 'Your encryption key has been re-secured with your new PIN.',

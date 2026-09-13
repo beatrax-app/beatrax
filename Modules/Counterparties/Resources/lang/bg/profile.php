@@ -9,7 +9,6 @@ return [
 
     'edit_display_name' => 'Редактирай показваното име',
 
-    'hero_net_received' => 'Нетно получено',
     'hero_12mo_total' => 'Общо за 12 месеца',
     'hero_transactions' => 'Транзакции',
     'hero_first_seen' => 'Първа поява',

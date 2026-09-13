@@ -67,6 +67,61 @@ final class AppNavigation
         return Lang::get('core::sidebar.nav.'.self::row($destination)['key']);
     }
 
+    // A row's path is not its identity. UnusualCharges and DriftAlerts are one
+    // route told apart by a query parameter, so comparing paths marked both and
+    // the rail lit the Drift row on the screen the reader had not opened.
+    /**
+     * @param  array<string, mixed>  $query
+     */
+    public static function active(string $path, array $query): ?Destination
+    {
+        $active = null;
+        $matched = -1;
+
+        foreach (self::rows() as $row) {
+            $destination = $row['destination'];
+            $declared = count($destination->routeParams());
+
+            if ($declared <= $matched || self::pathOf($destination) !== $path) {
+                continue;
+            }
+
+            if (self::isRegistered($destination) && self::carries($destination, $query)) {
+                $active = $destination;
+                $matched = $declared;
+            }
+        }
+
+        return $active;
+    }
+
+    // `path()` renders the declared parameters into a query string, so an
+    // UnusualCharges row's own path is `/drift?type=anomaly` and matches no
+    // request path at all. The screen is the part in front of the question.
+    private static function pathOf(Destination $destination): string
+    {
+        $path = parse_url($destination->path(), PHP_URL_PATH);
+
+        return is_string($path) ? $path : $destination->path();
+    }
+
+    // Every parameter the destination declares, and nothing about the ones it
+    // does not: a reader who reached the same screen with a sort or a page in
+    // the address is still on it.
+    /**
+     * @param  array<string, mixed>  $query
+     */
+    private static function carries(Destination $destination, array $query): bool
+    {
+        foreach ($destination->routeParams() as $key => $value) {
+            if (($query[$key] ?? null) !== $value) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     // A runtime that never registered a module's routes — the mobile peer boots
     // fewer of them — drops those rows from the rail instead of throwing.
     private static function isRegistered(Destination $destination): bool

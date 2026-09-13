@@ -8,6 +8,7 @@ use Illuminate\Database\DatabaseManager;
 use Modules\Sync\Internal\Config\CoveredTableOrder;
 use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 use Modules\Sync\Internal\OpLog\OpLogEntry;
+use Modules\Sync\Public\Services\JsonRowReferences;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -29,6 +30,7 @@ final readonly class PeerRowAliases
         private CoveredTableOrder $tableOrder,
         private LoggerInterface $log,
         private SensitiveFieldRegistry $sensitive = new SensitiveFieldRegistry,
+        private JsonRowReferences $jsonReferences = new JsonRowReferences,
     ) {}
 
     // Called when an insert was refused because the row is already present. If
@@ -143,69 +145,15 @@ final readonly class PeerRowAliases
         // inside a JSON value rather than as the value.
         foreach ($this->tableOrder->jsonParentColumns($table) as $column => $paths) {
             if (array_key_exists($column, $payload)) {
-                $payload[$column] = $this->translateJson($payload[$column], $paths, $deviceId, $userId);
+                $payload[$column] = $this->jsonReferences->rewrite(
+                    $payload[$column],
+                    $paths,
+                    fn (string $parent, int|string $id): int|string => $this->localIdFor($parent, $deviceId, $id, $userId),
+                );
             }
         }
 
         return $payload;
-    }
-
-    // A create built from a captured row carries the stored JSON text, while a
-    // live write carries the array behind it, so the value is handed back in
-    // the shape it arrived in. Anything that will not decode is left alone.
-    /**
-     * @param  array<string, string>  $paths
-     */
-    private function translateJson(mixed $value, array $paths, string $deviceId, int $userId): mixed
-    {
-        $decoded = is_string($value) ? json_decode($value, true) : $value;
-
-        if (! is_array($decoded)) {
-            return $value;
-        }
-
-        foreach ($paths as $path => $parent) {
-            $decoded = $this->rewriteAtPath($decoded, explode('.', $path), $parent, $deviceId, $userId);
-        }
-
-        if (! is_string($value)) {
-            return $decoded;
-        }
-
-        $encoded = json_encode($decoded);
-
-        return is_string($encoded) ? $encoded : $value;
-    }
-
-    // Walks one declared path into the decoded value and rewrites what it
-    // reaches. An empty segment list is the leaf, `*` is every element, and a
-    // key the value does not carry rewrites nothing.
-    /**
-     * @param  list<string>  $segments
-     */
-    private function rewriteAtPath(mixed $node, array $segments, string $parent, string $deviceId, int $userId): mixed
-    {
-        $segment = array_shift($segments);
-
-        if ($segment === null) {
-            return $this->rewriteId($node, $parent, $deviceId, $userId);
-        }
-
-        if (! is_array($node)) {
-            return $node;
-        }
-
-        if ($segment === '*') {
-            $keys = array_keys($node);
-        } else {
-            $keys = array_key_exists($segment, $node) ? [$segment] : [];
-        }
-
-        foreach ($keys as $key) {
-            $node[$key] = $this->rewriteAtPath($node[$key], $segments, $parent, $deviceId, $userId);
-        }
-
-        return $node;
     }
 
     // One id as this device knows it. Anything that is not an id -- a null
@@ -216,10 +164,17 @@ final readonly class PeerRowAliases
             return $value;
         }
 
-        $local = $this->localFor($parent, $deviceId, $value, $userId);
+        return $this->localIdFor($parent, $deviceId, $value, $userId);
+    }
+
+    // The local row the peer's id means, or the peer's id where this device has
+    // never recorded one for it.
+    private function localIdFor(string $parent, string $deviceId, int|string $id, int $userId): int|string
+    {
+        $local = $this->localFor($parent, $deviceId, $id, $userId);
 
         if ($local === null) {
-            return $value;
+            return $id;
         }
 
         return is_numeric($local) ? (int) $local : $local;

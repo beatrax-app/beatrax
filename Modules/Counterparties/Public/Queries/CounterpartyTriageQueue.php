@@ -10,11 +10,11 @@ use Illuminate\Database\Query\Builder;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Support\Lang;
 use Modules\Counterparties\Internal\Actions\LabelCounterparty;
-use Modules\Counterparties\Internal\Support\NewestTransactionFirst;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Counterparties\Public\Support\CounterpartyDefaultName;
 use Modules\Import\Public\Services\MerchantNameResolver;
+use Modules\Ledger\Public\Support\NewestTransactionFirst;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 

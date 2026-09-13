@@ -14,8 +14,14 @@ final class SpendingTrendCard extends Component
 {
     public function render(CurrentUser $currentUser, CategorySpendTrendQuery $query, ViewFactory $views): View
     {
+        $user = $currentUser->user();
+
+        // The card converts, so it discloses, and a stale rate's sentence turns
+        // on this: a reader with online fetching off is never told to wait for
+        // a refresh that skips them.
         return $views->make('shell::livewire.spending-trend-card', [
-            'trend' => $query->forUser($currentUser->user()),
+            'trend' => $query->forUser($user),
+            'fxOnlineEnabled' => $user->fx_online_enabled === true,
         ]);
     }
 }

@@ -9,7 +9,6 @@ return [
 
     'edit_display_name' => 'Izmeni prikazano ime',
 
-    'hero_net_received' => 'Neto primljeno',
     'hero_12mo_total' => 'Ukupno u 12 meseci',
     'hero_transactions' => 'Transakcije',
     'hero_first_seen' => 'Prvi put viđeno',

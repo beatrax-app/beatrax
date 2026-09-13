@@ -627,7 +627,12 @@ that a user still wants to name.
 probe: a debounced Settings → Aliases live input walks the user's most
 recent 500 transactions (bounded by design — a full-history scan on
 every keystroke would saturate SQLite WAL contention) and returns the
-total match count plus the first five rows. Matching runs in PHP via
+total match count plus the first five rows. The cut decides *which* 500,
+so the order it takes them in is
+`Ledger\Public\Support\NewestTransactionFirst::ACROSS_ACCOUNTS` and not
+`posted_at, id`: the id is counted per device, and the reader decides on
+the match count —
+[an ordering that picks](../../architecture/an-ordering-that-picks.md). Matching runs in PHP via
 `mb_strpos`/`mb_strtolower`, never SQL `LIKE`, mirroring the
 Categorization `RuleEvaluator` defence so a user-authored pattern never
 enters the SQL string. Patterns under three characters are rejected

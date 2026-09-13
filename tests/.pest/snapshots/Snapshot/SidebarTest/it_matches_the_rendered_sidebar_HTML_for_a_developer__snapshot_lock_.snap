@@ -81,7 +81,7 @@
         Chains
         <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>
     
-    <a href="https://beatrax.test/drift?type=anomaly" class="side-item">
+    <a href="https://beatrax.test/drift?type=anomaly" class="side-item ">
         <span class="ic" aria-hidden="true">◬</span>
         Unusual charges
         <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    </a>

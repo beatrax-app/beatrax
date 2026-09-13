@@ -37,7 +37,6 @@ return [
     'label_this' => 'Etichetează această contraparte',
 
     'stat_12mo' => '12 luni',
-    'stat_net_received' => 'Net încasat',
     'stat_avg_mo' => 'Medie / lună',
     'sparkline_aria' => 'Grafic al activității pe 12 luni',
 

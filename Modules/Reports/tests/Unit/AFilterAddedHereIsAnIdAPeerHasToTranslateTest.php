@@ -11,7 +11,7 @@ use Modules\Reports\Internal\Dto\ReportDefinition;
 // nothing just shows a smaller figure.
 
 // The rewrite that stops that is declared per KEY in
-// CoveredTableOrder::JSON_PARENTS, and nothing in the schema can notice a new
+// JsonRowReferences, and nothing in the schema can notice a new
 // key appearing here. This is the notice.
 const FILTERS_TRANSLATED_ON_ARRIVAL = ['accounts', 'categories', 'counterparties'];
 
@@ -46,7 +46,7 @@ it('declares every id-list filter where the merge layer translates it', function
     expect($filters)->toBe($expected, implode("\n", [
         'A filter holding row ids was added to or removed from ReportDefinition.',
         'The stored definition travels whole, so each of these keys has to be',
-        'declared in Modules/Sync CoveredTableOrder::JSON_PARENTS under',
+        'declared in Modules/Sync JsonRowReferences under',
         "saved_reports.definition as '<key>.*' => '<table>', or the peer stores",
         'the ids the other device minted and the report counts other money.',
         '',

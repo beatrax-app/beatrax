@@ -9,11 +9,11 @@ use Illuminate\Contracts\Session\Session;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Modules\Auth\Internal\Lock\AppLockCredentialRejections;
-use Modules\Auth\Internal\Lock\AppLockProvisioner;
 use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\BrowserEnrollmentAuthorizer;
 use Modules\Auth\Internal\Lock\ColdStartEnroller;
 use Modules\Auth\Internal\Lock\ColdStartEnrollmentResult;
+use Modules\Auth\Internal\Lock\PinVerificationService;
 use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Contracts\SecretShield;
@@ -96,18 +96,20 @@ trait ManagesBiometricEnrollment
             return;
         }
 
+        $userId = $currentUser->user()->id;
+
         $vault->isAvailable()
-            ? $this->armTheOsVault($enroller->enroll($currentUser->user()->id, $pin, $session))
-            : $this->armTheBrowser($browser->authorize($currentUser->user()->id, $pin, $session));
+            ? $this->armTheOsVault($enroller->enroll($userId, $pin, $session), $userId, $rejections)
+            : $this->armTheBrowser($browser->authorize($userId, $pin, $session), $userId, $rejections);
     }
 
     // The panel stays open on a refusal for the same reason the disable one
     // does: another PIN is an answer the reader can still give.
-    private function armTheOsVault(ColdStartEnrollmentResult $result): void
+    private function armTheOsVault(ColdStartEnrollmentResult $result, int $userId, AppLockCredentialRejections $rejections): void
     {
         if ($result !== ColdStartEnrollmentResult::Enrolled) {
             $this->flashMessage = $result === ColdStartEnrollmentResult::PinRejected
-                ? Lang::get('auth::app_lock.error_pin_incorrect')
+                ? $rejections->refusedPin($userId)
                 : Lang::get('auth::app_lock.error_enroll_failed');
 
             return;
@@ -122,10 +124,10 @@ trait ManagesBiometricEnrollment
     // this closes the panel on a PIN it accepted rather than on an enrolment it
     // has seen. onBiometricEnrolled() and onBiometricEnrollmentFailed() are the
     // two ways it comes back.
-    private function armTheBrowser(bool $authorized): void
+    private function armTheBrowser(bool $authorized, int $userId, AppLockCredentialRejections $rejections): void
     {
         if (! $authorized) {
-            $this->flashMessage = Lang::get('auth::app_lock.error_pin_incorrect');
+            $this->flashMessage = $rejections->refusedPin($userId);
 
             return;
         }
@@ -164,9 +166,10 @@ trait ManagesBiometricEnrollment
         string $pin,
         CurrentUser $currentUser,
         BiometricDeviceStore $biometricStore,
-        AppLockProvisioner $provisioner,
+        PinVerificationService $verifier,
         ColdStartVault $vault,
         AppLockCredentialRejections $rejections,
+        Session $session,
     ): void {
         $rejection = $rejections->pinRequired($pin);
 
@@ -178,11 +181,19 @@ trait ManagesBiometricEnrollment
 
         $user = $currentUser->user();
 
-        if (! $provisioner->verifyPin($user->id, $pin)) {
-            $this->flashMessage = Lang::get('auth::app_lock.error_pin_incorrect');
+        // The metered verifier rather than a bare hash comparison: removing a
+        // durable wrap of the data key costs the PIN, and a guess at it has to
+        // cost what a guess at the lock screen costs.
+        $dataKey = $verifier->verify($user->id, $pin, $session)->dataKey;
+
+        if ($dataKey === null) {
+            $this->flashMessage = $rejections->refusedPin($user->id);
 
             return;
         }
+
+        // Proof, not a use of the key: nothing below unwraps anything.
+        sodium_memzero($dataKey);
 
         $biometricStore->deleteForUser($user->id);
         $cleared = $vault->forget($user->id);

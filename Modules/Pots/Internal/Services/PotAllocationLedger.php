@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Pots\Internal\Services;
 
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\JoinClause;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Concerns\CoercesScalars;
@@ -99,14 +100,35 @@ final readonly class PotAllocationLedger
     {
         $connection = $this->db->connection();
 
-        $rows = $connection->table('pots')
+        // The same settlement cutoff the pot cards read through: an active pot
+        // that was once archived keeps the movements it was settled for, and
+        // counting them again claimed an allocation the pot does not hold.
+        $query = $connection->table('pots')
             ->leftJoin('pot_movements', static function (JoinClause $join) use ($user): void {
                 $join->on('pot_movements.pot_id', '=', 'pots.id')
                     ->where('pot_movements.user_id', '=', $user->id);
             })
+            ->leftJoinSub(
+                PotSettlement::lastPerPot($connection, self::toInt($user->id)),
+                'settled',
+                'settled.pot_id',
+                '=',
+                'pots.id',
+            )
             ->where('pots.user_id', $user->id)
             ->where('pots.account_id', $accountId)
-            ->where('pots.status', PotStatus::Active->value)
+            ->where('pots.status', PotStatus::Active->value);
+
+        // A pot with no movement at all joins a null row, which is neither
+        // after the cutoff nor before it; the clause keeps its zero line.
+        $query->where(static function (Builder $kept): void {
+            $kept->whereNull('pot_movements.id')
+                ->orWhere(static function (Builder $since): void {
+                    PotSettlement::movedSince($since, 'pot_movements', 'settled');
+                });
+        });
+
+        $rows = $query
             ->groupBy('pots.currency', 'pot_movements.currency')
             ->get([
                 'pots.currency AS pot_currency',

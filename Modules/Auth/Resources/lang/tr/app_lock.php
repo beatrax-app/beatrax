@@ -61,7 +61,6 @@ return [
     'error_pin_digits' => 'PIN :min ila :max haneli olmalı — yalnızca rakam.',
     'error_pin_mismatch' => 'PIN kodları eşleşmiyor. Yeniden dene.',
     'error_pin_required' => 'PIN kodunu gir.',
-    'error_pin_incorrect' => 'Hatalı PIN.',
     'error_account_password_required' => 'Hesap parolanı gir.',
     'error_account_password' => 'Hatalı hesap parolası.',
     'change_pin_success' => 'Şifreleme anahtarın yeni PIN kodunla yeniden güvenceye alındı.',

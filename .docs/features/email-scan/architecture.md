@@ -1020,6 +1020,25 @@ Q-encoded/B-encoded runs. Stateless and singleton-safe — the
 underlying `MailMimeParser` keeps no per-call state, so one instance
 serves every fetcher worker without contention.
 
+The Date header is the **sender's**, and it is adopted only where
+`Instant::storesAsAppLocal()` says the storage frame can hold it.
+`inbox_messages.internal_date` is a DATETIME read back with
+`CarbonImmutable::parse`, so `Instant::appLocal()` refuses anything that
+is not a zero-padded `Y-m-d H:i:s` — and an instant the app zone pushes
+past the year 9999 is exactly that. `Date: Mon, 31 Dec 9999 23:59:59
++0000` is one line of one message: `Mon` is not that day's weekday, so a
+parser honouring the day name rolls forward into the year 10000 before
+any zone offset applies. Let through, the write threw a `LogicException`
+out of `InboxScanContext::storeParsedMessage()` — and a refusal that
+escapes the walk is the one thing `skipOversized()` exists to prevent:
+the cursor stays where it was and every later tick meets the same
+message. Such a date falls back to the provider's own stamp, which is
+what the missing-header fallback already means.
+
+`DiscoveryScanJob::safeParseDate()` answers the same way for
+`discovered_senders.last_seen_at`: a stamp it parsed but cannot store is
+the clock's own, not a refusal raised at the write.
+
 ## OAuth providers, state, and typed exceptions
 
 `GoogleOAuthProvider` (thin wrapper over

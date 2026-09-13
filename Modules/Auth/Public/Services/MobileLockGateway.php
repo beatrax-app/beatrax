@@ -129,23 +129,10 @@ final readonly class MobileLockGateway
             && $remaining <= PinVerificationService::HARD_CAP - self::FORGOTTEN_PIN_HELP_AFTER_FAILURES;
     }
 
-    // Here, mirroring LockScreen::remainingAttempts(), so no second module
+    // Carried through from the class that keeps the meter, so no second module
     // needs its own raw read of user_app_lock_configs.
     public function remainingPinAttempts(int $userId): ?int
     {
-        $row = $this->db->connection()->table('user_app_lock_configs')
-            ->where('user_id', $userId)
-            ->first(['failed_attempts']);
-
-        if ($row === null) {
-            return null;
-        }
-
-        $failed = $row->failed_attempts;
-        if (! is_int($failed) && ! is_string($failed)) {
-            return null;
-        }
-
-        return max(0, PinVerificationService::HARD_CAP - (int) $failed);
+        return $this->verifier->remainingAttempts($userId);
     }
 }
