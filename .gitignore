@@ -12,18 +12,19 @@
 # `--no-dev` packaged build, which fatals the app at boot.
 /bootstrap/cache/*.php
 /storage/*.key
-/storage/app/private
-/storage/app/public
-/storage/app/dev_mode
-/storage/app/inbox
-/storage/app/inbox-drop
-/storage/app/mobile
-/storage/app/backups
-/storage/app/sync
-# scripts/measure_sandboxed_interpreter.php builds a signed probe bundle here.
-/storage/app/sandbox-probe
-/storage/app/secrets
-/storage/app/first-launch.app-key-generated
+
+# Everything under storage/app, then the few paths back. Naming the
+# directories one at a time meant the list lagged the code that mints them:
+# db-backups/ held whole databases while matching no line here. Both shells
+# already exclude storage/app wholesale, so this is the same posture.
+/storage/app/*
+!/storage/app/.gitkeep
+!/storage/app/public/
+/storage/app/public/*
+!/storage/app/public/.gitkeep
+# Re-included as a directory so the paypal negation further down can reach
+# through it; git cannot re-include a path under an excluded parent.
+!/storage/app/dev-imports/
 /storage/framework/cache/*
 !/storage/framework/cache/.gitignore
 /storage/framework/sessions/*
