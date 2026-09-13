@@ -378,7 +378,12 @@ written by a sweep.
 
 `MerchantDisplayName::forStoredKey()` resolves the clustering key through the
 user's own `merchants.name` and then the decrypted
-`transactions.counterparty_name`, and answers null when neither knows a name —
+`transactions.counterparty_name` — one row out of however many charges share the
+key, so it is taken in
+`Ledger\Public\Support\NewestTransactionFirst::ACROSS_ACCOUNTS` order and not
+`posted_at, id`, which named the series one thing here and another there
+([an ordering that picks](../../architecture/an-ordering-that-picks.md)). It
+answers null when neither source knows a name —
 at which point the detector **defers the series to the next sweep** rather than
 writing an unreadable value into a column the review screen renders. It answers
 null for two shapes: a keyed digest, and the `_no_counterparty` sentinel, which
