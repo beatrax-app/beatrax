@@ -55,8 +55,12 @@ final readonly class IcsStatementHeader
      */
     public function paymentDueDate(string $text): ?CarbonImmutable
     {
+        // Without /u, like every other anchor over this text layer: the pattern
+        // is ASCII throughout, while one ill-formed byte anywhere in the
+        // extraction made preg_match return false, which `!== 1` reads as
+        // "the statement states no due date".
         $pattern = '/'.preg_quote(IcsPdfExtractionMap::MIN_DUE_PARAGRAPH, '/')
-            .'[^\n]*?(\d{1,2})\s+('.self::FULL_MONTH_ALTERNATION.')\s+(\d{4})/iu';
+            .'[^\n]*?(\d{1,2})\s+('.self::FULL_MONTH_ALTERNATION.')\s+(\d{4})/i';
 
         if (preg_match($pattern, $text, $m) === 1) {
             return $this->safeParseDutchDate($m[1], $m[2], $m[3]);
