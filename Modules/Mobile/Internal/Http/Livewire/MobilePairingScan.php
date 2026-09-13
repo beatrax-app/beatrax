@@ -18,14 +18,12 @@ use Modules\Auth\Public\Services\AppLockClientConfig;
 use Modules\Auth\Public\Services\MobileLockGateway;
 use Modules\Core\Public\Contracts\CurrentUser;
 use Modules\Core\Public\Events\UserInstalled;
-use Modules\Core\Public\Exceptions\ColumnNotDeclaredException;
 use Modules\Core\Public\Http\Livewire\Concerns\AnnouncesStepChanges;
 use Modules\Core\Public\Http\Livewire\Concerns\HoldsFlashMessage;
 use Modules\Core\Public\Navigation\Destination;
 use Modules\Core\Public\Services\EncryptionMigrationService;
 use Modules\Core\Public\Support\Brand;
 use Modules\Core\Public\Support\Lang;
-use Modules\Core\Public\Support\SchemaShape;
 use Modules\Mobile\Internal\Http\Livewire\Concerns\AcceptsPairingCode;
 use Modules\Mobile\Internal\Http\Livewire\Concerns\ChoosesCodeEntryArm;
 use Modules\Mobile\Internal\Http\Livewire\Concerns\ConfirmsAcrossTheLock;
@@ -557,20 +555,14 @@ final class MobilePairingScan extends Component
         int $userId,
         Session $session,
     ): void {
-        $missing = SchemaShape::missingColumns($db->connection(), 'device_registry', ['confirmed_at', 'self_retired_at']);
-
-        // An absent column makes the clause below false for every row, so this
-        // would fan no epoch out and report having found no peer to send to.
-        if ($missing !== []) {
-            throw ColumnNotDeclaredException::on('device_registry', $missing);
-        }
-
         $recipients = $db->connection()->table('device_registry')
             ->where('user_id', $userId)
             ->where('is_self', 0)
             ->whereNotNull('confirmed_at')
             // Confirmed and not a device: the row a restore's repair retired
-            // verifies history and collects nothing.
+            // verifies history and collects nothing. Asked with no schema
+            // question in front of it, alone among this column's readers,
+            // because the gate cannot render this screen before the migration.
             ->whereNull('self_retired_at')
             ->pluck('id');
 
@@ -721,19 +713,12 @@ final class MobilePairingScan extends Component
     // would have to deliver, and waiting on it is waiting forever.
     private function hasConfirmedPeer(int $userId, DatabaseManager $db): bool
     {
-        $missing = SchemaShape::missingColumns($db->connection(), 'device_registry', ['confirmed_at', 'self_retired_at']);
-
-        // A false answer here is waiting forever for an epoch, so it must not be
-        // reached from a clause that is false because the column is absent.
-        if ($missing !== []) {
-            throw ColumnNotDeclaredException::on('device_registry', $missing);
-        }
-
         return $db->connection()
             ->table('device_registry')
             ->where('user_id', $userId)
             ->where('is_self', 0)
             ->whereNotNull('confirmed_at')
+            // Unguarded for the reason the fan-out above is.
             ->whereNull('self_retired_at')
             ->exists();
     }

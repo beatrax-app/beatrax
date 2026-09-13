@@ -38,6 +38,15 @@ const RETIRED_COLUMN_SEAM_DECLARATION = 'function stillADevice(';
 // that a class with one guarded reader and one unguarded one passes; the
 // alternative is a scanner that has to follow calls, which is a worse trade.
 
+// Readers a raised question could only make worse, each with the reason it is
+// not one. A Livewire component is an HTTP entry point: a refusal raised there
+// reaches the generic handler as a 500 on a screen somebody is looking at,
+// which AnExpectedConditionIsNotAServerFault refuses outright.
+const RETIRED_COLUMN_CANNOT_ASK_HERE = [
+    'Modules/Mobile/Internal/Http/Livewire/MobilePairingScan.php::fanOutToConfirmedPeers' => 'MobileEnsureDatabaseReady redirects mobile.pair to mobile.database-incomplete while SchemaCompletionMarker is raised, so this screen cannot render until every migration has run. AHalfBuiltDatabaseDoesNotOpenTheApp pins that redirect, which is what makes the absent column unreachable here rather than merely unlikely',
+    'Modules/Mobile/Internal/Http/Livewire/MobilePairingScan.php::hasConfirmedPeer' => 'the same screen and the same gate. Its transitive reach into GdkRotationService, which does ask, is wrapped in the fan-out catch and logged rather than raised',
+];
+
 // A scan that matched nothing reports what a clean tree reports. Measured at 9
 // statements across 5 files; the floor is below that so an ordinary edit does
 // not trip it, and far enough above zero that a broken walk does.
@@ -89,8 +98,10 @@ it('asks whether the column is there before deciding on a retired row', function
             : RETIRED_COLUMN_ASKED;
         $asked = array_any($spellings, static fn (string $spelling): bool => str_contains($text, $spelling));
 
-        if (! $asked) {
-            $silent[] = $site['path'].'::'.$site['function'];
+        $key = $site['path'].'::'.$site['function'];
+
+        if (! $asked && ! isset(RETIRED_COLUMN_CANNOT_ASK_HERE[$key])) {
+            $silent[] = $key;
         }
     }
 
@@ -99,4 +110,18 @@ it('asks whether the column is there before deciding on a retired row', function
         RETIRED_COLUMN,
         implode("\n  ", $silent),
     ));
+});
+
+// A pin that has stopped matching is a pin that has outlived what earned it,
+// and an exemption nobody can see rot is how an allow-list becomes the guard's
+// blind spot.
+it('keeps no exemption the tree no longer holds', function (): void {
+    $sites = array_map(
+        static fn (array $site): string => $site['path'].'::'.$site['function'],
+        retiredColumnSites(),
+    );
+
+    $stale = array_values(array_diff(array_keys(RETIRED_COLUMN_CANNOT_ASK_HERE), $sites));
+
+    expect($stale)->toBe([], 'These are exempted from asking and no longer read the column at all: '.implode(', ', $stale));
 });
