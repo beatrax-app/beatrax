@@ -126,6 +126,20 @@ Two things are shared between worktrees and will bite you:
   own guard under `tests/Contracts/`, and
   [analyser-rules-enforced-locally](.docs/conventions/analyser-rules-enforced-locally.md)
   explains how to prove a rule reports before guarding it.
+- **Everything Pest loads shares ONE global namespace**, so two test files
+  declaring the same helper function is a fatal at bootstrap: the whole shard
+  dies before a test runs, naming no test and no assertion count. It only shows
+  when both files land in the same shard, so it survives every run of either
+  file alone. Prefix a helper with something owned by its file, never a generic
+  `makeUser`. `ATestHelperNameIsOwnedByOneFileArchTest` is the guard, and it
+  reads the `Pest.php` bootstraps too.
+- **A test double belongs in `Modules/<Module>/tests/Support/`, not at the top
+  of the test that uses it.** A class declared in a `*Test.php` file is outside
+  every PSR-4 rule, so Composer's classmap skips it: it exists only because Pest
+  happened to require that file. A second file naming it fatals, and `composer
+  install` prints a warning per site. `ATestDoubleTheAutoloaderCannotFindArchTest`
+  is the guard. Both of these bite hardest in CI, where the shards differ from
+  what you ran locally.
 - **One dialect per surface:** a name the machine resolves is American
   (`dialing`, `enrollment`, `normalize`), while English a reader is shown — and
   the prose explaining it — stays British. Mixing them fails
