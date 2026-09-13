@@ -1001,3 +1001,37 @@ optional unless `$allowNegative` is false). It was centralised here because
 the earlier per-component inline implementations silently 100×-multiplied
 any dot-decimal input — the dot was being stripped as a thousands separator
 unconditionally.
+
+### Reading a stored amount back into its box
+
+The scenario sidebar's edit form is filled from the persisted mutation payload,
+which denominates its figure in **minor units** under `amountMinor` (one-off,
+recurring) or `newAmountMinor` (change-amount). The boxes are bound to
+`form.amount` and `form.newAmount`, and whatever sits in them is read back
+through `AmountStringParser::toMinor()`. The two names have to be translated
+across, and the figure has to be re-rendered at the currency's own scale.
+
+Handed over untranslated, `ScenarioEditorSidebar::editMutation()` left the box
+empty over a populated payload — the blade reads `form.amount`, the payload had
+written `form.amountMinor` — and "Save changes" answered *"Amount is
+required."*. Three of the five mutation kinds could not be edited at all;
+`cancel_series` and `shift_series_date`, which carry no amount, were unaffected.
+
+`BuildsMutationForms::withEditableAmounts()` does the translation.
+[`MoneyInput::formatAbsMinor()`](../ledger/minor-units-and-zero-decimal-currencies.md#where-the-scale-comes-from)
+is the inverse to use, not `toDecimalString()`:
+
+| | rendered | read back by `AmountStringParser` |
+| --- | --- | --- |
+| `formatAbsMinor(123456, 'EUR')`, `nl` | `1.234,56` | 123456 |
+| `formatAbsMinor(123456, 'EUR')`, `en` | `1,234.56` | 123456 |
+| `formatAbsMinor(135000, 'JPY')` | `135.000` / `135,000` | 135000 |
+| `toDecimalString(123456, 'EUR')` | `1234.56` | a `.` the reader's box does not write |
+
+The currency is the payload's own (`currency` for the two add kinds) or the
+series' (`currencyForSeries()` for change-amount), never the reader's base
+currency — the same rule the write direction follows, and the reason a ¥135,000
+new amount must not come back as `1.350,00`.
+
+Held by
+`Modules/Forecasting/tests/Feature/AStoredWhatIfOpensItsEditFormWithItsOwnAmountTest.php`.
