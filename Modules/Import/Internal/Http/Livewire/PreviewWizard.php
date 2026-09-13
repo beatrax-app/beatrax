@@ -19,7 +19,6 @@ use Modules\Import\Internal\Exceptions\InvalidAccountNameException;
 use Modules\Import\Internal\Exceptions\PreviewCacheCorruptedException;
 use Modules\Import\Internal\Pipeline\PreviewCache;
 use Modules\Import\Internal\Services\OwnAccountPrompt;
-use Modules\Import\Internal\Services\RemoteFetchPath;
 use Modules\Import\Internal\Services\StandInAccountName;
 use Modules\Import\Internal\Services\StatementDifferenceForRun;
 use Modules\Import\Public\Actions\DiscardImport;
@@ -261,8 +260,9 @@ final class PreviewWizard extends Component
         $this->googlePlayAccountName = '';
     }
 
-    // A bank-fetched window has no file to re-read, and the named account is
-    // already written: the still-open window picks it up on the next sync.
+    // A bank-fetched window has no file to re-read, and neither has a run that
+    // reached this device over sync carrying a peer's path: the named account
+    // is already written, and the still-open window picks it up next sync.
     private function reReadTheSource(RunsImports $importer, User $user): void
     {
         /** @var ImportRun $importRun */
@@ -271,15 +271,9 @@ final class PreviewWizard extends Component
             ->where('user_id', $user->id)
             ->firstOrFail();
 
-        if (RemoteFetchPath::isRemote($importRun->raw_file_path)) {
-            return;
-        }
-
-        $importer->runFromUpload(
-            $importRun->raw_file_path,
-            $importRun->source_format,
+        $importer->runFromStagedRun(
+            $importRun,
             $user,
-            basename($importRun->raw_file_path),
             $this->formatHintForReRun($importRun->source_format),
         );
     }

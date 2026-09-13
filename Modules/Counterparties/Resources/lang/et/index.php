@@ -37,7 +37,6 @@ return [
     'label_this' => 'Määra sellele vastaspoolele silt',
 
     'stat_12mo' => '12 kuud',
-    'stat_net_received' => 'Neto laekunud',
     'stat_avg_mo' => 'Keskmine / kuus',
     'sparkline_aria' => '12 kuu tegevuse graafik',
 

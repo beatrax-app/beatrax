@@ -312,7 +312,7 @@ order of a list. Today none of those eight groups happens to be at its
 counterparty's newest date, which is the difference between a defect
 that is firing and one that is an import away.
 
-The clause is `Internal\Support\NewestTransactionFirst::ACROSS_ACCOUNTS`:
+The clause is `Ledger\Public\Support\NewestTransactionFirst::ACROSS_ACCOUNTS`:
 
 ```
 posted_at desc, booked_at desc, amount_minor desc, currency desc,
@@ -334,11 +334,27 @@ occurrence_ordinal)` groups** on the file at all.
 
 Six are not enough in general, because they are unique only *within* an
 account and one counterparty is charged across several — a subscription
-billed to two cards, a shop the reader pays from either account. So both
-reads join `accounts` and end on `iban`: `unique(user_id, iban)`, never
+billed to two cards, a shop the reader pays from either account. So each
+read joins `accounts` and ends on `iban`: `unique(user_id, iban)`, never
 sealed, and what the account IS rather than what this device numbered
 it. With the IBAN standing in for `account_id` the clause is the whole
 UNIQUE index, so the rank is total rather than merely better.
+
+There are **four** transaction reads in this module, not two. The first
+pass fixed the two that rank and left the two capped lists that put rows
+in front of the reader directly:
+`CounterpartyTriage::recentTransactionsFor()`, the five charges shown as
+the evidence for a triage decision, and
+`CounterpartyProfileQuery::recentActivity()`, the profile's
+recent-activity list. Both take a `limit`, so the tie decided *which*
+rows the two devices showed — the same harm the window function was
+fixed for. All four carry the clause now, and
+[an ordering that picks](../../architecture/an-ordering-that-picks.md)
+is the guard that keeps a fifth from landing without it. The same read
+turned up in `Search` and `Import`, which is why the clause now lives in
+`Ledger\Public\`: the module boundary refuses either of them an
+`Internal` import, and a copy per module is a second answer waiting to
+drift.
 
 `fingerprint` is the obvious single-column answer and it is wrong:
 `FingerprintComposer` folds `account_id` into the digest, so the two
@@ -369,13 +385,13 @@ a two-way tie in that tally is settled by whichever description the
 query returned first. Both halves reach the reader — as a suggested
 name, and as a confidence band.
 
-## The phone list is the one rendering that says which way the total went
+## What says which way the total went, and what must not claim it
 
 The figure is a magnitude at all four index renderings and on the profile
 hero, and that is deliberate — [the exception, and why it is
 one](triage-suggestions.md#the-recent-transactions-list-and-why-its-amounts-are-signed).
-The phone list is the only one of the five that also reports direction,
-and it reported it in emerald and in nothing else: `abs()` had already
+The phone list was the first of the five found reporting direction, and
+it reported it in emerald and in nothing else: `abs()` had already
 taken the sign off, so a total received and a total paid printed the same
 characters. A reader who hears the row, and a reader who cannot separate
 the two colours, were told money owed and money received alike.
@@ -390,10 +406,30 @@ which is the rule `Resources/views/components/type-chip.blade.php` states
 for this surface. A total of exactly zero points neither way and gets no
 word: absence has to mean "no direction", not "the other direction".
 
-The cards, the desktop table and the profile hero report no direction at
-all, before or after this. Giving them one would be a signed aggregate
-where the product has chosen a magnitude, which is a different question
-from making an existing signal perceivable.
+The card and the profile hero reported one as well, and reported it as a
+claim rather than as a reading: the label was picked by the
+counterparty's **type**, so every personal row read `Net received`
+whether the twelve months had run that way or the other one. The figure
+beside it is the same magnitude, so nothing on the surface could
+contradict the sentence — a friend you had net paid €500 read `Net
+received` over `€500.00`. Both labels are now picked by the sign of
+`total12mMinor` and by nothing else, from the pair the phone list already
+uses: `core::dashboard.in` where the twelve months came in,
+`core::dashboard.out` where they went out, and the surface's own neutral
+name — `stat_12mo`, `hero_12mo_total` — where the total is exactly zero
+and points neither way, on the same rule as the row above. On the hero
+that one label is also what `x-core::fx-disclosure` announces as the
+trigger's accessible name, so the rate details stopped naming a direction
+of their own as well.
+
+`stat_net_received` and `hero_net_received` are therefore gone from all
+twenty-six locales. Nothing renders them, and a line no reader can reach
+is one `EveryTranslatedLineReachesAReaderArchTest` reports.
+
+Direction is still reported for a personal counterparty only, and the
+desktop table still reports none. Giving the other types one would be a
+signed aggregate where the product has chosen a magnitude, which is a
+different question from either of the ones above.
 
 ## What the index toolbar offers
 

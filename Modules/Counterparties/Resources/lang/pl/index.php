@@ -37,7 +37,6 @@ return [
     'label_this' => 'Oznacz tego kontrahenta',
 
     'stat_12mo' => '12 mies.',
-    'stat_net_received' => 'Netto otrzymane',
     'stat_avg_mo' => 'Śr. / mies.',
     'sparkline_aria' => 'Wykres aktywności z 12 miesięcy',
 

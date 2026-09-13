@@ -37,7 +37,6 @@ return [
     'label_this' => 'Diesen Zahlungspartner kennzeichnen',
 
     'stat_12mo' => '12 Mon.',
-    'stat_net_received' => 'Netto erhalten',
     'stat_avg_mo' => 'Ø / Mon.',
     'sparkline_aria' => 'Aktivitätsverlauf über 12 Monate',
 

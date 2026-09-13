@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Sync\Public\Services;
 
 use Illuminate\Database\DatabaseManager;
+use Modules\Sync\Internal\Exceptions\CensusColumnMissingException;
 use Modules\Sync\Internal\Merge\StrandedCreates;
 use Throwable;
 
@@ -52,8 +53,8 @@ final readonly class StrandedCreateHealthCheck
     {
         try {
             $census = $this->census();
-        } catch (Throwable) {
-            return ['severity' => 'warning', 'message' => 'could not be read — run php artisan migrate'];
+        } catch (Throwable $unreadable) {
+            return ['severity' => 'warning', 'message' => self::unreadable($unreadable)];
         }
 
         $accounted = $this->accountedFor($census['removedHere'], $census['held']);
@@ -66,6 +67,16 @@ final readonly class StrandedCreateHealthCheck
         }
 
         return ['severity' => 'warning', 'message' => $this->missing($census['unplaced'], $accounted)];
+    }
+
+    // A schema the census could not answer against names the column, because
+    // the remedy is specific and the reader is at a console. Anything else is
+    // the older message: the table itself is missing, which migrate also fixes.
+    private static function unreadable(Throwable $unreadable): string
+    {
+        return $unreadable instanceof CensusColumnMissingException
+            ? $unreadable->getMessage()
+            : 'could not be read — run php artisan migrate';
     }
 
     // A count of what was examined rather than a bare "ok": a pass that reports

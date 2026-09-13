@@ -3,16 +3,21 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
+use Livewire\Livewire;
 use Modules\Core\Models\User;
+use Modules\Counterparties\Internal\Http\Livewire\CounterpartyTriage;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Queries\CounterpartyIndexQuery;
+use Modules\Counterparties\Public\Queries\CounterpartyProfileQuery;
 use Modules\Counterparties\Public\Queries\CounterpartyTriageQueue;
 use Modules\Ledger\Models\Account;
 
-// Three reads here used to end on `id`, and `counterparties.id` and
+// Five reads here used to end on `id`, and `counterparties.id` and
 // `transactions.id` are both per-device autoincrements: the same logical row is
-// a different number on the paired device. Two of the three decide what the
-// screen says, and the third decides which rows the reader is offered at all.
+// a different number on the paired device. Two decide what the screen says, one
+// decides which rows the reader is offered at all, and the last two are capped
+// lists whose CONTENTS the tie picks — the evidence for a triage decision, and
+// the profile's recent activity.
 
 function agreedNewestUser(string $username): User
 {
@@ -194,4 +199,52 @@ it('tallies the twenty descriptions the statement puts last, not the twenty this
     $unknown = Counterparty::query()->findOrFail($cpId);
 
     expect($queue->suggestionFor($unknown)?->suggestedCounterpartyName)->toBe('Alpha');
+});
+
+it('lists the profile\'s recent activity in the order the statement booked it', function (): void {
+    $user = agreedNewestUser('agreed-newest-profile');
+    $account = agreedNewestAccount($user, 'NL02ABNA0123456789');
+    $runId = agreedNewestRun($user);
+    $cpId = agreedNewestCounterparty($user->id, 'agreed-newest-profile-shop', now()->toDateTimeString());
+
+    // The later charge is inserted first, so it holds the LOWER id: a limit of
+    // one keeps a different row under each rule.
+    $later = agreedNewestCharge($user, $account, $cpId, $runId, 1, 'LATE CHARGE ON THE FILE');
+    $earlier = agreedNewestCharge($user, $account, $cpId, $runId, 0, 'EARLY CHARGE ON THE FILE');
+
+    expect($earlier)->toBeGreaterThan($later, 'the fixture no longer inverts id order against ordinal order');
+
+    /** @var CounterpartyProfileQuery $query */
+    $query = app(CounterpartyProfileQuery::class);
+    $cp = Counterparty::query()->findOrFail($cpId);
+
+    $descriptions = $query->recentActivity($cp, 1)
+        ->map(static fn (stdClass $row): string => (string) $row->description)
+        ->all();
+
+    expect($descriptions)->toBe(['LATE CHARGE ON THE FILE']);
+});
+
+it('puts the same five charges in front of the reader the triage decision is made on', function (): void {
+    $user = agreedNewestUser('agreed-newest-evidence');
+    $account = agreedNewestAccount($user, 'NL69INGB0123456789');
+    $runId = agreedNewestRun($user);
+    $cpId = agreedNewestCounterparty($user->id, 'agreed-newest-evidence-shop', now()->toDateTimeString());
+
+    // Six charges the bank booked on one day, inserted ordinal-DESCENDING so
+    // the id order runs the other way to the statement's. Five are kept, and
+    // the one dropped is a different charge under each rule.
+    for ($ordinal = 5; $ordinal >= 0; $ordinal--) {
+        agreedNewestCharge($user, $account, $cpId, $runId, $ordinal, 'CHARGE ORDINAL '.$ordinal);
+    }
+
+    $shown = Livewire::actingAs($user)->test(CounterpartyTriage::class)->viewData('recentTransactions');
+
+    expect(array_map(static fn (stdClass $row): string => (string) $row->description, $shown))->toBe([
+        'CHARGE ORDINAL 5',
+        'CHARGE ORDINAL 4',
+        'CHARGE ORDINAL 3',
+        'CHARGE ORDINAL 2',
+        'CHARGE ORDINAL 1',
+    ]);
 });

@@ -37,7 +37,6 @@ return [
     'label_this' => 'Označi ovu drugu stranu',
 
     'stat_12mo' => '12 mes.',
-    'stat_net_received' => 'Neto primljeno',
     'stat_avg_mo' => 'Prosek / mes.',
     'sparkline_aria' => 'Grafikon aktivnosti u 12 meseci',
 

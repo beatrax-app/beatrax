@@ -35,13 +35,17 @@ final readonly class HeaderSniffer
 
     public function sniff(string $localPath, string $declaredFormat): SniffResult
     {
+        // No path in either sentence. This exception is marked as naming no
+        // user data, which is what puts its message on the preview screen and
+        // in the daily log — and a staged statement is named for the account
+        // it covers, so the path routinely spells an IBAN or a card number.
         if (! is_file($localPath) || ! is_readable($localPath)) {
-            throw new SniffMismatchException(sprintf('File not readable: %s', $localPath));
+            throw new SniffMismatchException('The statement file could not be read.');
         }
 
         $handle = @fopen($localPath, 'rb');
         if ($handle === false) {
-            throw new SniffMismatchException(sprintf('Could not open file: %s', $localPath));
+            throw new SniffMismatchException('The statement file could not be opened.');
         }
 
         try {
@@ -110,13 +114,16 @@ final readonly class HeaderSniffer
             ));
         }
 
+        // The expected cell and its position, never the cell the file holds:
+        // the first line of a file that is not this export is a row of it, and
+        // this message reaches the preview screen and the daily log.
         foreach ($preset->headerSignature as $position => $expected) {
             if (($columns[$position] ?? null) !== $expected) {
                 throw new SniffMismatchException(sprintf(
-                    "This CSV doesn't match the expected %s column layout (header starts with '%s', got '%s'). If the export format changed, file an issue.",
+                    "This CSV doesn't match the expected %s column layout — column %d should read '%s'. If the export format changed, file an issue.",
                     $preset->label,
-                    implode(',', $preset->headerSignature),
-                    implode(',', array_slice($columns, 0, count($preset->headerSignature))),
+                    $position + 1,
+                    $expected,
                 ));
             }
         }

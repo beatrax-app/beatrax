@@ -40,6 +40,7 @@ Modules/Ledger/
 │   │   ├── CategoryPathName.php
 │   │   ├── CurrencyDisplayName.php
 │   │   ├── LedgerDay.php
+│   │   ├── NewestTransactionFirst.php      # the one tie-break both devices compute the same way
 │   │   ├── OutwardSpend.php
 │   │   ├── ReconciledRowExemptions.php
 │   │   ├── SplitLegs.php
