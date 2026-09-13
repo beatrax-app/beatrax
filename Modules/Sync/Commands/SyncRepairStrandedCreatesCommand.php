@@ -55,7 +55,7 @@ final class SyncRepairStrandedCreatesCommand extends Command
         $table = $this->tableOption();
         $plans = $this->repair->plan($table, $userId);
 
-        $this->report($table, $plans);
+        $this->report($table, $plans, $userId);
 
         if ($plans === [] || ! $this->option('apply')) {
             $this->line($plans === [] ? 'Nothing to repair.' : 'Dry run: nothing was changed. Pass --apply to write it.');
@@ -73,13 +73,13 @@ final class SyncRepairStrandedCreatesCommand extends Command
     /**
      * @param  list<array{pk: string, devices: list<string>, naturalKey: string|null, action: string}>  $plans
      */
-    private function report(string $table, array $plans): void
+    private function report(string $table, array $plans, int $userId): void
     {
         $this->line(sprintf(
-            '%s: %d create(s) the log holds that no row of account %s answers for.',
+            '%s: %d create(s) the log holds that no row of account %d answers for.',
             $table,
             count($plans),
-            $this->option('user') ?? 'owner',
+            $userId,
         ));
 
         if ($plans !== []) {
