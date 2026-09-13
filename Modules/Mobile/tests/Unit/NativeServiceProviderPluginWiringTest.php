@@ -12,6 +12,7 @@ use Native\Mobile\Providers\SecureStorageServiceProvider;
 use Native\Mobile\UI\NativeUIServiceProvider;
 use NativePHP\BackgroundTasks\BackgroundTasksServiceProvider;
 use NativePHP\LocalNotifications\LocalNotificationsServiceProvider;
+use Tests\Contracts\Support\StringNamedClasses;
 
 // The plugin providers install only in mobile-app/vendor, so the manifest is
 // checked as source text rather than through autoloading. plugins() itself can
@@ -114,5 +115,31 @@ it('registers the element types the UI plugins contribute', function (): void {
         .'That is what an empty allow-list looks like — check that App\\Providers\\NativeServiceProvider still resolves.',
         implode(', ', $missing),
         count($types),
+    ));
+});
+
+// The desktop root cannot resolve these and asks by string because of it, so
+// tests/Contracts/AClassNamedAsAStringStillResolvesSomewhereArchTest can only
+// check the spelling against a declared list. Here the answer is knowable, and
+// it is asked of the SAME scan of the source rather than a copy of the list.
+it('resolves every string-named class exactly where its package is', function (): void {
+    $mobilePackageInstalled = class_exists(ElementRegistry::class);
+
+    $wrong = [];
+    foreach (array_keys(StringNamedClasses::lookups()) as $name) {
+        // Names this root supplies either way are not the question.
+        if (class_exists($name) && ! str_starts_with($name, 'Native') && ! str_starts_with($name, 'Beatrax\\Biometric')) {
+            continue;
+        }
+
+        if (class_exists($name) !== $mobilePackageInstalled) {
+            $wrong[] = $name;
+        }
+    }
+
+    expect($wrong)->toBe([], sprintf(
+        'nativephp/mobile is %s here, so these should be too and are not: %s',
+        $mobilePackageInstalled ? 'installed' : 'absent',
+        implode(', ', $wrong),
     ));
 });
