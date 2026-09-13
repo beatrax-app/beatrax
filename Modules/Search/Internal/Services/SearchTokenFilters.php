@@ -62,16 +62,7 @@ final readonly class SearchTokenFilters
             $before = $parsedFilters['before'];
         }
 
-        // Already read as an amount by AmountToken, which asked MoneyInput. A
-        // side this token does not state -- the open end of a `>` or a `<` --
-        // arrives null and leaves the chip's own value standing.
-        $amountMin = $filters->amountMin;
-        $amountMax = $filters->amountMax;
-        $bound = $parsedFilters['amount'] ?? null;
-        if (is_array($bound)) {
-            $amountMin = is_string($bound[0] ?? null) ? $bound[0] : $amountMin;
-            $amountMax = is_string($bound[1] ?? null) ? $bound[1] : $amountMax;
-        }
+        [$amountMin, $amountMax] = self::amountBound($parsedFilters['amount'] ?? null, $filters);
 
         return new SearchFilters(
             accounts: $accounts,
@@ -88,6 +79,24 @@ final readonly class SearchTokenFilters
             types: $filters->types,
             uncategorized: $filters->uncategorized,
         );
+    }
+
+    // Already read as an amount by AmountToken, which asked MoneyInput. A side
+    // this token does not state -- the open end of a `>` or a `<` -- arrives
+    // null and leaves the chip's own value standing.
+    /**
+     * @return array{0: ?string, 1: ?string}
+     */
+    private static function amountBound(mixed $bound, SearchFilters $filters): array
+    {
+        if (! is_array($bound)) {
+            return [$filters->amountMin, $filters->amountMax];
+        }
+
+        return [
+            is_string($bound[0] ?? null) ? $bound[0] : $filters->amountMin,
+            is_string($bound[1] ?? null) ? $bound[1] : $filters->amountMax,
+        ];
     }
 
     /**

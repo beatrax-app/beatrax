@@ -255,8 +255,9 @@ What the module explicitly does NOT do:
   resolves a candidate rowid set (FTS5 `MATCH` when the text query is
   ≥3 characters; a bounded `LIKE` over that same indexed body
   otherwise, since FTS5's trigram tokenizer needs a 3-character
-  minimum — both arms therefore search one corpus, and a needle does
-  not change what it is matched against at the third character),
+  minimum — so both arms search one corpus, though they do not compare
+  against it the same way: see
+  [where the two arms disagree](#where-the-two-arms-disagree)),
   applies the
   existing filter dimensions with per-dimension ownership validation,
   and returns a cursor-paginated `SearchResultPage` with
@@ -306,6 +307,38 @@ writer that names its column through an enum rather than a literal. A seal site
 whose table argument the scanner cannot read is reported rather than assumed
 innocent. Each site either reaches `SearchIndexWriterContract` or is pinned with
 the reason its write leaves the document still describing the row.
+
+## Where the two arms disagree
+
+One corpus, two comparisons. FTS5's trigram tokenizer folds case over the whole
+of Unicode; SQLite's `LIKE` and `LOWER()` fold ASCII only, and no pragma changes
+that. So the arm a needle lands in decides whether a non-ASCII capital in the
+body is reachable, and **a needle does change what it is matched against at the
+third character** — the opposite of what this page claimed until it was
+measured. Over a body containing `MÖRK BAR`:
+
+| needle | characters | arm | result |
+|---|---|---|---|
+| `ör` | 2 | `LIKE` | **not found** |
+| `örk` | 3 | FTS5 `MATCH` | found |
+| `ÖR` | 2 | `LIKE` | found |
+| `ÖRK` | 3 | FTS5 `MATCH` | found |
+
+The same split runs through every `LikeNeedle` caller, so one palette keystroke
+folds case two ways: `EntityNameSearch` matches a counterparty in PHP with
+`mb_strtolower()` and finds `Ölkanne` from `ölkanne`, while the goal, pot,
+category and recurring sections match in SQL and do not.
+
+**This is known and deliberately not fixed, because every fix is larger than the
+defect.** A case-folded shadow column would double the disclosed plaintext copy
+of the reader's own notes — the one thing
+[the shadow's disclosure](#a-column-this-process-cannot-read) promises does not
+widen — for the sake of a two-character needle. Folding the stored body instead
+would render every snippet in lower case, since the body is what `snippet()`
+shows. A `sqliteCreateFunction` UDF would fold correctly but has to be
+registered on every connection the query can run on, which is a decision about
+this application's database connection rather than about search. Whoever takes
+it should take it as one.
 
 ## A document that outlives its transaction
 
