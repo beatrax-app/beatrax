@@ -23,7 +23,10 @@ function cursorTriageUser(string $username): User
     ]);
 }
 
-/** @return list<int> queue order: updated_at then id, both descending */
+// Every row is written in one second, so the queue's first term ties for all of
+// them and the slug decides. These slugs ascend with the loop, so the queue
+// order is the insertion order — where it used to be the reverse of it.
+/** @return list<int> queue order: updated_at descending, then slug ascending */
 function cursorTriageQueue(int $userId, int $count): array
 {
     $ids = [];
@@ -42,7 +45,7 @@ function cursorTriageQueue(int $userId, int $count): array
         ]);
     }
 
-    return array_reverse($ids);
+    return $ids;
 }
 
 function cursorTriageCardName(int $userId): string
@@ -97,7 +100,7 @@ it('walks a whole queue of three without stepping over one', function (): void {
         $component->set('draftName', 'Named '.$i)->call('manualLabel');
     }
 
-    expect($seen)->toBe(['Mystery 3', 'Mystery 2', 'Mystery 1'])
+    expect($seen)->toBe(['Mystery 1', 'Mystery 2', 'Mystery 3'])
         ->and(Counterparty::query()->where('user_id', $user->id)->where('type', CounterpartyType::Unknown->value)->count())->toBe(0);
 });
 

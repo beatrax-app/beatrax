@@ -293,6 +293,82 @@ last two both rendered and then hidden by `.phone-only`/`.desktop-only`
 — and each copy was formatting the amounts and rebuilding the link from
 the same three fields.
 
+## Which charge is the newest
+
+The index shows each counterparty's most recent `description` and
+`counterparty_name`, resolved by a window function in
+`CounterpartyIndexQuery::recentRowByCounterparty()`:
+`ROW_NUMBER() OVER (PARTITION BY counterparty_id ORDER BY ...)`, taken at
+`rn = 1`. `posted_at` is a `DATE`, so two charges on one day tie under
+it, and the tie used to fall to `transactions.id` — an autoincrement each
+device counts for itself.
+
+Measured on the live desktop database: **16 of the 205 transactions
+carrying a `counterparty_id` sit in a tied `(counterparty_id, posted_at)`
+group** — eight groups — and in **all eight the `description` differs**
+between the two rows, in four of eight the `counterparty_name` differs
+too. What the tie decides is therefore the string on the screen, not the
+order of a list. Today none of those eight groups happens to be at its
+counterparty's newest date, which is the difference between a defect
+that is firing and one that is an import away.
+
+The clause is `Internal\Support\NewestTransactionFirst::ACROSS_ACCOUNTS`:
+
+```
+posted_at desc, booked_at desc, amount_minor desc, currency desc,
+counterparty_normalized desc, occurrence_ordinal desc,
+charge_account.iban desc
+```
+
+The first six are the columns of `transactions_fingerprint_uq` minus
+`user_id` and `account_id`, the two a device counts for itself — the
+same key
+[`Transfers`](../transfers/architecture.md#which-leg-becomes-the-pair)
+ascends and the same one `Recurring`'s detectors sort on. On the live
+database those six alone part all eight groups: `booked_at` is midnight
+on seven of them, `amount_minor` parts those seven, and the eighth — two
+€3.50 charges to one counterparty on 2026-02-03 — is parted by
+`occurrence_ordinal`, which is 0 and 1. There are **no duplicate
+`(counterparty_id, posted_at, booked_at, amount_minor,
+occurrence_ordinal)` groups** on the file at all.
+
+Six are not enough in general, because they are unique only *within* an
+account and one counterparty is charged across several — a subscription
+billed to two cards, a shop the reader pays from either account. So both
+reads join `accounts` and end on `iban`: `unique(user_id, iban)`, never
+sealed, and what the account IS rather than what this device numbered
+it. With the IBAN standing in for `account_id` the clause is the whole
+UNIQUE index, so the rank is total rather than merely better.
+
+`fingerprint` is the obvious single-column answer and it is wrong:
+`FingerprintComposer` folds `account_id` into the digest, so the two
+devices hash different inputs. Held constant over 1 600 same-day pairs,
+changing only the account id from 1 to 2 flipped the order of the two
+digests 804 times.
+
+### The triage queue's own tie-break
+
+`CounterpartyTriageQueue::forUser()` orders unknowns by `updated_at`
+descending and takes `SCAN_LIMIT = 200`, so the order decides
+*membership*, not merely sequence. `updated_at` is a bulk-written
+column: on the live database **all 54 counterparties carry one of two
+values, 49 of them sharing a single `2026-09-10 21:10:04`** — so past
+the cap the second term is the whole answer, and it was `id`.
+
+It is now `slug`. `MergeRulesRegistry` calls `slug` the counterparty's
+identity string, it carries `unique(user_id, slug)`, and
+`SensitiveFieldRegistry` records why it is never sealed — see
+[the slug is a cross-platform key](slug-is-a-cross-platform-key.md).
+Ascending is arbitrary; the slug carries no recency. Arbitrary-but-agreed
+is what a tie-break needs, and it is the one thing `id` was not.
+
+The 20 descriptions `suggestionFor()` tallies a merchant name out of are
+ordered by the same `NewestTransactionFirst::ACROSS_ACCOUNTS`. The cap picks the
+pool the percentage is computed over, and PHP's `arsort()` is stable, so
+a two-way tie in that tally is settled by whichever description the
+query returned first. Both halves reach the reader — as a suggested
+name, and as a confidence band.
+
 ## The phone list is the one rendering that says which way the total went
 
 The figure is a magnitude at all four index renderings and on the profile
