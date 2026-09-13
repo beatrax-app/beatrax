@@ -5,6 +5,11 @@ declare(strict_types=1);
 return [
     'banner_aria' => 'Alerte de sistem',
 
+    'severity' => [
+        'critical' => 'Critic',
+        'warning' => 'Avertisment',
+    ],
+
     'actions' => [
         'download_and_install' => 'Descarcă și instalează',
         'download_and_install_aria' => 'Descarcă și instalează — marchează alerta de sistem #:id ca rezolvată',

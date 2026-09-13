@@ -5,6 +5,11 @@ declare(strict_types=1);
 return [
     'banner_aria' => 'Systemvarningar',
 
+    'severity' => [
+        'critical' => 'Kritisk',
+        'warning' => 'Varning',
+    ],
+
     'actions' => [
         'download_and_install' => 'Ladda ner och installera',
         'download_and_install_aria' => 'Ladda ner och installera — markerar systemvarning #:id som åtgärdad',

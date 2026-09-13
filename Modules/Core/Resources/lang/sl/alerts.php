@@ -5,6 +5,11 @@ declare(strict_types=1);
 return [
     'banner_aria' => 'Sistemska opozorila',
 
+    'severity' => [
+        'critical' => 'Kritično',
+        'warning' => 'Opozorilo',
+    ],
+
     'actions' => [
         'download_and_install' => 'Prenesi in namesti',
         'download_and_install_aria' => 'Prenesi in namesti — sistemsko opozorilo št. :id označi kot rešeno',

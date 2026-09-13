@@ -8,5 +8,7 @@ return [
     'not_scanned_yet' => 'aún sin analizar',
     'not_scanned_yet_phone' => 'sin analizar en este teléfono',
     'last_scanned' => 'último análisis',
+    'out_of_date' => 'desactualizado',
+    'not_scanned_here' => 'no se analiza en este dispositivo',
     'more' => '+:count más',
 ];

@@ -5,6 +5,11 @@ declare(strict_types=1);
 return [
     'banner_aria' => 'Rendszerüzenetek',
 
+    'severity' => [
+        'critical' => 'Kritikus',
+        'warning' => 'Figyelmeztetés',
+    ],
+
     'actions' => [
         'download_and_install' => 'Letöltés és telepítés',
         'download_and_install_aria' => 'Letöltés és telepítés — a #:id rendszerüzenetet megoldottnak jelöli',

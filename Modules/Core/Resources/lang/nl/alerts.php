@@ -5,6 +5,11 @@ declare(strict_types=1);
 return [
     'banner_aria' => 'Systeemmeldingen',
 
+    'severity' => [
+        'critical' => 'Kritiek',
+        'warning' => 'Waarschuwing',
+    ],
+
     'actions' => [
         'download_and_install' => 'Downloaden en installeren',
         'download_and_install_aria' => 'Downloaden en installeren — markeert systeemmelding #:id als opgelost',
