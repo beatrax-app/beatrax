@@ -15,6 +15,7 @@ use Modules\Counterparties\Internal\Actions\LabelCounterparty;
 use Modules\Counterparties\Models\Counterparty;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Counterparties\Public\Queries\CounterpartyTriageQueue;
+use Modules\Ledger\Public\Support\NewestTransactionFirst;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 
 final class CounterpartyTriage extends Component
@@ -326,12 +327,26 @@ final class CounterpartyTriage extends Component
         // and a card charged in dollars showed the reader $14.20 against a
         // €12.67 the same row reads everywhere else in the app.
         $rows = $db->connection()->table('transactions')
-            ->where('user_id', $userId)
-            ->where('counterparty_id', $cp->id)
-            ->orderByDesc('posted_at')
-            ->orderByDesc('id')
+            ->join(
+                'accounts as '.NewestTransactionFirst::ACCOUNT,
+                NewestTransactionFirst::ACCOUNT.'.id',
+                '=',
+                'transactions.account_id',
+            )
+            ->where('transactions.user_id', $userId)
+            ->where('transactions.counterparty_id', $cp->id)
+            // The cap makes this order decide WHICH five rows are the evidence
+            // for the label, not merely their sequence, and `id` is counted per
+            // device — so the peer showed five other charges for one decision.
+            ->orderByRaw(NewestTransactionFirst::ACROSS_ACCOUNTS)
             ->limit(5)
-            ->get(['id', 'posted_at', 'description', 'settled_amount_minor', 'settled_currency']);
+            ->get([
+                'transactions.id',
+                'transactions.posted_at',
+                'transactions.description',
+                'transactions.settled_amount_minor',
+                'transactions.settled_currency',
+            ]);
 
         // transactions.description is a SensitiveFieldRegistry column stored
         // as AEAD ciphertext; the raw query builder applies no cast, so

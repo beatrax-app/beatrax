@@ -11,7 +11,6 @@ use Modules\Core\Models\User;
 use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Support\Fmt;
 use Modules\Counterparties\Internal\Enums\CounterpartyTypeFilter;
-use Modules\Counterparties\Internal\Support\NewestTransactionFirst;
 use Modules\Counterparties\Internal\Support\RollingTwelveMonths;
 use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Counterparties\Public\Support\CounterpartyDefaultName;
@@ -20,6 +19,7 @@ use Modules\FX\Public\Dto\RateSet;
 use Modules\FX\Public\Services\CrossCurrencyTotal;
 use Modules\Ledger\Public\Enums\TransactionType;
 use Modules\Ledger\Public\Services\BaseCurrency;
+use Modules\Ledger\Public\Support\NewestTransactionFirst;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
 use stdClass;
 
