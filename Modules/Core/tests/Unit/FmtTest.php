@@ -72,6 +72,17 @@ it('keeps two significant digits, the way the short form does', function (): voi
         ->and(Fmt::compactCount(1500000))->toBe('1.5M');
 });
 
+// CLDR revises a short form between ICU releases, and the ICU this runs against
+// is not the one on every machine: Ubuntu's and macOS's disagree about Italian
+// today. Each entry records both answers and which one ships, so the guard
+// passes wherever it runs without going quiet about the other twenty-five.
+const COMPACT_FORMS_CLDR_MOVED = [
+    'it' => [
+        1000 => ['K', null],
+        1000000 => ["\u{00A0}Mln", "\u{00A0}Mio"],
+    ],
+];
+
 // The abbreviation is transcribed because the phone's ICU can only answer for
 // English, and a table nothing checks is a table that drifts. ICU is asked here
 // and has to agree for all 26 at both magnitudes.
@@ -88,16 +99,52 @@ it('abbreviates a thousand and a million the way CLDR abbreviates them', functio
             // figure itself, which is never "1" followed by letters.
             $cldr = preg_match('/^1(\D*)$/u', $rendered, $matches) === 1 ? $matches[1] : null;
 
-            if ($transcribed !== $cldr) {
-                $wrong[] = $locale->value.' at '.$magnitude.': transcribed '.var_export($transcribed, true)
-                    .', CLDR says '.var_export($cldr, true);
+            if ($transcribed === $cldr) {
+                continue;
             }
+
+            // Both answers have to be ones CLDR has given, and the shipped one
+            // has to be the first: a typo matches neither and still reports.
+            $moved = COMPACT_FORMS_CLDR_MOVED[$locale->value][$magnitude] ?? null;
+
+            if ($moved !== null && $transcribed === $moved[0] && in_array($cldr, $moved, true)) {
+                continue;
+            }
+
+            $wrong[] = $locale->value.' at '.$magnitude.': transcribed '.var_export($transcribed, true)
+                .', CLDR says '.var_export($cldr, true);
         }
     }
 
     expect($wrong)->toBe([], implode("\n", [
         'Modules/Core/Public/Enums/Locale.php has drifted from CLDR:',
         ...$wrong,
+    ]));
+});
+
+// The allowance above must not become a place a locale is quietly dropped: an
+// entry is only for a form CLDR itself moved, and the ICU running this has to
+// still give one of the two answers recorded for it.
+it('keeps no record of a moved short form that CLDR no longer gives', function (): void {
+    $stale = [];
+
+    foreach (COMPACT_FORMS_CLDR_MOVED as $code => $magnitudes) {
+        $short = new NumberFormatter($code, NumberFormatter::DECIMAL_COMPACT_SHORT);
+
+        foreach ($magnitudes as $magnitude => $answers) {
+            $rendered = (string) $short->format($magnitude);
+            $cldr = preg_match('/^1(\D*)$/u', $rendered, $matches) === 1 ? $matches[1] : null;
+
+            if (! in_array($cldr, $answers, true)) {
+                $stale[] = $code.' at '.$magnitude.': this ICU says '.var_export($cldr, true)
+                    .', which is neither answer recorded';
+            }
+        }
+    }
+
+    expect($stale)->toBe([], implode("\n", [
+        'These records no longer describe any answer CLDR gives here:',
+        ...$stale,
     ]));
 });
 
@@ -172,11 +219,11 @@ it('spells a threshold the way the catalogue two screens away spells it', functi
         $settings = require base_path('Modules/Core/Resources/lang/'.$locale->value.'/settings.php');
 
         foreach (['1', '10', '25', '50'] as $threshold) {
-            $catalogue = $settings['drift']['options'][$threshold];
+            $catalog = $settings['drift']['options'][$threshold];
             $rendered = Fmt::percent((int) $threshold, sign: '±');
 
-            if ($catalogue !== $rendered) {
-                $disagreed[] = $locale->value.' ['.$threshold.'] catalogue '.bin2hex((string) $catalogue)
+            if ($catalog !== $rendered) {
+                $disagreed[] = $locale->value.' ['.$threshold.'] catalogue '.bin2hex((string) $catalog)
                     .' vs rendered '.bin2hex($rendered);
             }
         }

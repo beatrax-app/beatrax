@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Modules\Core\Public\Enums\Locale;
+use Modules\Core\Public\Support\BladePhpSource;
+use Modules\Core\Public\Support\MarkupSource;
 use Modules\Core\Public\Support\PatternScan;
 use Symfony\Component\Finder\Finder;
 
@@ -119,32 +121,16 @@ const PERCENT_SIGN_CELL_FLOOR = 300;
 // is right: thirteen readers want a no-break space, one wants it in front, and
 // twelve want it closed up. Fmt::percent() is where that is known.
 
-// Machinery, not copy: a CSS length, a Tailwind class and a chart geometry are
-// percentages of a box rather than of anything a reader is told.
-const PERCENT_SIGN_MACHINERY = [
-    '/\{\{--.*?--\}\}/s',
-    '/<style\b.*?<\/style>/s',
-    '/\bstyle\s*=\s*"[^"]*"/s',
-    "/\bstyle\s*=\s*'[^']*'/s",
-    '/\bclass\s*=\s*"[^"]*"/s',
-    "/\bclass\s*=\s*'[^']*'/s",
-    '/@class\(\[.*?\]\)/s',
-    '/(?<!:)\/\/[^\n]*/',
-];
+// A sign a reader is shown is one in the text: after an echo, or typed into the
+// markup beside a figure. A CSS length, a Tailwind class and a chart geometry
+// are percentages of a box, and they live in attributes and in code, which is
+// why the text is read rather than the file.
+const PERCENT_SIGN_TYPED = '/(?:\}\}|!\}|\d)\h*%(?![sdu%])/u';
 
-// A figure against the sign, in the three shapes a template writes one: after
-// an echo, typed into the markup, or concatenated onto a value in PHP.
-const PERCENT_SIGN_TYPED = '/(?:\}\}|!\}|\d)\s*%(?![sdu%])|\.\s*[\x27"]\s?%[\x27"]/u';
-
-// Each entry names a file whose percent sign is not copy, and why. The `proves`
-// pattern re-checks the reason: when it stops matching, the exemption has
-// outlived what earned it.
-const PERCENT_SIGN_PINS = [
-    'Modules/Reports/Resources/views/livewire/partials/report-bar-chart.blade.php' => [
-        'reason' => 'a bar geometry handed to the chart library: the width of a column against its slot, which no reader is shown',
-        'proves' => "/'columnWidth' => '\d+%'/",
-    ],
-];
+// The other half is code building the string: a sign appended to a value. A
+// literal '55%' handed to a chart is not that, and is left alone for the same
+// reason a CSS length is.
+const PERCENT_SIGN_APPENDED = '/\.\h*[\x27"]\h?%[\x27"]/u';
 
 // Templates, and not the catalogues beside them: a catalogue spells the sign
 // its own locale's way and the rule above judges it for that. The PHP that
@@ -165,22 +151,61 @@ function percentSignTypedFiles(): array
     return $files;
 }
 
-function percentSignWithoutMachinery(string $source): string
+// Where the run a reading matched sits in the file it was read out of. The
+// window is widened until it names one place, because "}}%" alone names every
+// echo with a sign against it.
+/** @param array{0: string, 1: int} $match */
+function percentSignSourceOffset(string $source, string $reading, array $match): ?int
 {
-    return PatternScan::replace(PERCENT_SIGN_MACHINERY, '', $source);
-}
+    $end = $match[1] + strlen($match[0]);
 
-/** @return list<int> the line of every percent sign typed against a figure in $source */
-function percentSignTypedLines(string $source): array
-{
-    $stripped = percentSignWithoutMachinery($source);
-    $lines = [];
+    for ($width = strlen($match[0]); $width <= 120; $width += 12) {
+        $needle = substr($reading, max(0, $end - $width), min($width, $end));
+        $at = strpos($source, $needle);
 
-    foreach (PatternScan::setsWithOffsets(PERCENT_SIGN_TYPED, $stripped) as $match) {
-        $lines[] = substr_count(substr($stripped, 0, $match[0][1]), "\n") + 1;
+        if ($at === false) {
+            return null;
+        }
+
+        if (strpos($source, $needle, $at + 1) === false) {
+            return $at + strlen($needle);
+        }
     }
 
-    return $lines;
+    return null;
+}
+
+// Blade is not HTML and a template is not PHP: an HTML5 parser relocates an
+// <x-core::th> out of its table, and token_get_all reads a whole template as
+// one T_INLINE_HTML. Both readings come from the parsers written for that,
+// which keep the line the Blade wrote each one on.
+/** @return list<int> the line of every percent sign a reader is shown in $source */
+function percentSignTypedLines(string $source): array
+{
+    $lines = [];
+
+    // BladePhpSource keeps the line the Blade wrote each island on. The text
+    // reading does not: dropping a multi-line attribute takes its newlines with
+    // it, and a line number counted there names a line in no file. The matched
+    // run is copied verbatim out of the source, so it is looked up there.
+    $readings = [
+        [MarkupSource::text($source), PERCENT_SIGN_TYPED, true],
+        [BladePhpSource::of($source), PERCENT_SIGN_APPENDED, false],
+    ];
+
+    foreach ($readings as [$reading, $pattern, $relocate]) {
+        foreach (PatternScan::setsWithOffsets($pattern, $reading) as $match) {
+            $at = $relocate
+                ? percentSignSourceOffset($source, $reading, $match[0])
+                : $match[0][1];
+
+            $lines[] = $at === null ? 0 : substr_count(substr($source, 0, $at), "\n") + 1;
+        }
+    }
+
+    sort($lines);
+
+    return array_values(array_unique($lines));
 }
 
 // Twelve readers of twenty-six were shown the right one by accident, and the
@@ -191,18 +216,10 @@ it('never lets a template type the percent sign itself', function (): void {
     $read = 0;
 
     foreach (percentSignTypedFiles() as $path) {
-        $relative = str_replace(base_path().'/', '', $path);
-        $source = (string) file_get_contents($path);
         $read++;
 
-        $pin = PERCENT_SIGN_PINS[$relative] ?? null;
-
-        if ($pin !== null && PatternScan::matches($pin['proves'], $source)) {
-            continue;
-        }
-
-        foreach (percentSignTypedLines($source) as $line) {
-            $offenders[] = $relative.':'.$line;
+        foreach (percentSignTypedLines((string) file_get_contents($path)) as $line) {
+            $offenders[] = str_replace(base_path().'/', '', $path).':'.$line;
         }
     }
 
@@ -234,15 +251,18 @@ it('reads a typed percent sign, and leaves the machinery alone', function (strin
     'an echo with the sign against it' => ['<span>{{ $pct }}%</span>', [1]],
     'an unescaped echo' => ['<span>{!! $pct !!}%</span>', [1]],
     'a figure typed into the markup' => ['<p>up 50% this month</p>', [1]],
-    'a sign concatenated in PHP' => ["return \$pct.'%';", [1]],
+    'a sign appended in an island' => ["@php\n\$x = \$pct.'%';\n@endphp", [2]],
     'a call that places it' => ['<span>{{ Fmt::percent($pct) }}</span>', []],
     'a CSS length in a style attribute' => ['<div style="width: 50%;"></div>', []],
+    'a rule in a style block' => ['<style>.a { width: 55%; }</style>', []],
     'a Tailwind arbitrary value' => ['<div class="h-[calc(100%-3rem)]"></div>', []],
     'a percent inside @class' => ["<div @class(['w-[50%]' => \$wide])></div>", []],
+    'a geometry handed to a chart' => ["@php\n\$o = ['columnWidth' => '55%'];\n@endphp", []],
     'a printf specifier' => ['<p>%s of the budget</p>', []],
     'a sign named in a comment' => ['{{-- printed -0.0% once --}}', []],
-    'a sign named in a PHP comment' => ['// printed -0.0% once', []],
     'a URL is not a comment' => ['<a href="https://example.test/a">{{ $pct }}%</a>', [1]],
+    'a bare unit label beside a field' => ['<input><span>%</span>', []],
+    'an echo a paragraph above a bare sign' => ["<p>{{ \$x }}</p>\n<span>%</span>", []],
 ]);
 
 // Fmt::percent() and the guard below read the same table, so a mistake in it

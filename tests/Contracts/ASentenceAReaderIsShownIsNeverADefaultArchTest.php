@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\BladePhpSource;
 use Symfony\Component\Finder\Finder;
 
 // The phone asked the enclave to unlock with the sentence iOS prints on the
@@ -46,6 +47,14 @@ function sentenceDefaultIsThrowable(?string $parent): bool
     return $parent !== null && is_a($parent, Throwable::class, true);
 }
 
+// The walk holds templates as well as classes — `.blade.php` ends in `.php`, so
+// every `.php` walk does — and token_get_all reads a template as one
+// T_INLINE_HTML, reporting every island in it clean without reading it.
+function sentenceDefaultSource(string $path): string
+{
+    return BladePhpSource::forPath($path, (string) file_get_contents($path));
+}
+
 /**
  * Every parameter in $path whose default is a quoted string.
  *
@@ -53,7 +62,7 @@ function sentenceDefaultIsThrowable(?string $parent): bool
  */
 function sentenceDefaults(string $path): array
 {
-    $tokens = token_get_all((string) file_get_contents($path));
+    $tokens = token_get_all(sentenceDefaultSource($path));
     $count = count($tokens);
 
     $namespace = '';
@@ -238,7 +247,7 @@ it('never lets a parameter default answer for a sentence a reader is shown', fun
  */
 function sentenceFallbacks(string $path): array
 {
-    $tokens = token_get_all((string) file_get_contents($path));
+    $tokens = token_get_all(sentenceDefaultSource($path));
     $count = count($tokens);
     $found = [];
 
