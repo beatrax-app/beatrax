@@ -59,6 +59,14 @@ and the round trip is pinned per locale in `MoneyInputTest`. The
 parse side stays deliberately tolerant of both separators, because a
 reader who has seen the field in one language may type the other.
 
+That invariant has two sides, and the second one had never been checked. A mark
+`formatAbsMinor()` can write has to be readable by whatever stands in FRONT of
+`tryToMinor()` as well — the `pattern` on the box the figure was rendered into,
+and the anchors a receipt matcher captures a figure with. Both admitted `.` and
+`,` alone: Forecasting's buffer box declared its own rendered `2 500,00`
+invalid, and a receipt reading `Bedrag: EUR 1 234,56` was booked as €1,00. See
+[a figure is grouped the way its reader writes one](../receipts/architecture.md#a-figure-is-grouped-the-way-its-reader-writes-one).
+
 Nothing else in the tree may format minor units by hand. The one
 remaining hand-rolled formatter (`ManagesSplitEditor`, via a private
 helper on `TransactionDetail`) wrote Dutch into the split-leg boxes
