@@ -131,9 +131,12 @@ and the assertion — see
   is logged; `MatchOutcomeDto::unmatched()` is the documented
   no-match return shape, and `RecordReceipt` stamps the
   `file_imports` row `status = unmatched`. The matcher_key
-  column on the source row stays NULL. `skipped($reason)` is a
-  different outcome: a matcher DID claim the message and then
-  found the body was not a transaction.
+  column on the source row stays NULL — that null is what says
+  nothing read the message. `skipped($reason)` is a different
+  outcome: a matcher DID claim the message and then found the
+  body was not a transaction, and so is an `unmatched($reason)`
+  a matcher withheld. Both land `matcher_key` naming that
+  matcher.
 - **Adding a new matcher is one constant edit + one class
   ship.** Append the FQN to `MATCHER_FQNS` in the provider;
   ship the class implementing `SenderMatcher`. The provider's
@@ -205,6 +208,9 @@ and the assertion — see
   sender** — `MatchOutcomeDto::unmatched()`; the `file_imports`
   row lands `status = unmatched` with `matcher_key = NULL`; no
   enrichment fires.
+- **An `.eml` a matcher claimed and then withheld** — the same
+  `status = unmatched`, but `matcher_key` names that matcher,
+  which is the only thing separating the two rows.
 - **A user-dropped `.mbox` containing several receipts** —
   `MboxIterator::iterate($file)` yields each message; each is
   processed by `RecordReceipt` independently.
