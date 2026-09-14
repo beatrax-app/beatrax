@@ -2515,6 +2515,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Import/tests/Feature/PreviewWizardTest.php -> Modules\\Recurring\\Internal\\Jobs\\DetectRecurringSeriesJob',
         'Modules/Import/tests/Feature/TheRevolutBalanceAgreesWithTheBankTest.php -> Modules\\Ingestion\\Internal\\Adapters\\Csv\\GenericCsvAmountParser',
         'Modules/Ingestion/tests/Feature/PaypalFundingLegTypingTest.php -> Modules\\Import\\Internal\\Pipeline\\Stages\\ClassifyTransactionType',
+        'Modules/Ledger/tests/Feature/ALegNoteTheEditorNeverShowedSurvivesASaveTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Ledger/tests/Feature/AReaderOutsideTheEuroRollsUpInTheirOwnCurrencyTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Ledger/tests/Feature/AmountsRemainAggregatableTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Ledger/tests/Feature/AnAppendDoesNotSwallowANoteItCouldNotReadTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
