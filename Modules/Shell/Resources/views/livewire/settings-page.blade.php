@@ -84,11 +84,12 @@
                 <x-core::locale-select
                     labeled
                     field-id="settings-locale-select"
+                    aria-describedby="settings-locale-help"
                     :selected="$locale"
                     select-class="block w-full max-w-xs rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-slate-100"
                     wire:change="setLocale($event.target.value)"
                 />
-                <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.language.help') }}</p>
+                <p id="settings-locale-help" class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.language.help') }}</p>
                 @error('locale')
                     <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
                 @enderror
@@ -108,11 +109,12 @@
                 <x-core::timezone-select
                     labeled
                     field-id="settings-timezone-select"
+                    aria-describedby="settings-timezone-help"
                     :selected="$timezone"
                     select-class="block w-full max-w-xs rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus-visible:ring-slate-100"
                     wire:change="setTimezone($event.target.value)"
                 />
-                <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.timezone.help') }}</p>
+                <p id="settings-timezone-help" class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('core::settings.timezone.help') }}</p>
                 @error('timezone')
                     <p class="text-sm text-rose-600 dark:text-rose-500">{{ $message }}</p>
                 @enderror

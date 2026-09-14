@@ -52,7 +52,7 @@
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div class="space-y-1">
             <label for="opening-input-{{ $accountId }}" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('forecasting::opening_balance.opening_label') }}</label>
-            <p class="text-xs text-slate-500 dark:text-slate-400">{{ $helpText }}</p>
+            <p id="opening-help-{{ $accountId }}" class="text-xs text-slate-500 dark:text-slate-400">{{ $helpText }}</p>
             <div class="flex items-center gap-1">
                 <span class="text-sm text-slate-500 dark:text-slate-400" aria-hidden="true">{{ $symbol }}</span>
                 <input
@@ -70,10 +70,11 @@
 
         <div class="space-y-1">
             <label for="as-of-input-{{ $accountId }}" class="block text-sm text-slate-900 dark:text-slate-100">{{ Lang::get('forecasting::opening_balance.as_of_label') }}</label>
-            <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::opening_balance.as_of_help') }}</p>
+            <p id="as-of-help-{{ $accountId }}" class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('forecasting::opening_balance.as_of_help') }}</p>
             <x-core::date-input
                 field-id="as-of-input-{{ $accountId }}"
                 wire:model="asOfInput"
+                aria-describedby="as-of-help-{{ $accountId }}"
                 :aria-label="Lang::get('forecasting::opening_balance.as_of_label')"
             />
         </div>

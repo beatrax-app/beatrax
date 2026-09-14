@@ -281,13 +281,20 @@
                         type="number"
                         id="rule-form-priority"
                         wire:model.lazy="priorityInput"
+                        {{-- Both, space separated: the error does not replace
+                             the sentence explaining what the number means. A
+                             literal per branch rather than one built inside the
+                             attribute, so the rule that reads these can see an
+                             id it can go and look for. --}}
                         @if ($errorPriority !== '')
                             aria-invalid="true"
-                            aria-describedby="rule-form-priority-error"
+                            aria-describedby="rule-form-priority-help rule-form-priority-error"
+                        @else
+                            aria-describedby="rule-form-priority-help"
                         @endif
                         class="w-28 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-mono text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                     />
-                    <p class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('categorization::rule_form.priority_help') }}</p>
+                    <p id="rule-form-priority-help" class="text-xs text-slate-500 dark:text-slate-400">{{ Lang::get('categorization::rule_form.priority_help') }}</p>
                     @if ($errorPriority !== '')
                         <p id="rule-form-priority-error" class="text-sm text-rose-600 dark:text-rose-500">{{ $errorPriority }}</p>
                     @endif
