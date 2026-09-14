@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Filesystem\Filesystem;
 use Modules\Core\Internal\Console\Support\BackupSidecar;
 use Modules\Core\Public\Contracts\Clock;
+use Modules\Core\Public\Services\UserDataPathService;
 
 it('reports installed versions and probe rows on a healthy environment', function (): void {
     // A fresh sidecar so BackupFreshnessProbe reports ok; with all three probes
@@ -127,4 +128,23 @@ it('exits non-zero when the BackupFreshnessProbe warns (DoctorCommand probe aggr
 it('prints the row counting what the op log holds and the tables do not', function (): void {
     $this->artisan('beatrax:doctor')
         ->expectsOutputToContain('rows the log still holds');
+});
+
+it('names both subjects its rows describe', function (): void {
+    // The rows split across two subjects. Store-derived ones follow the default
+    // connection; file-derived ones follow UserDataPathService, which
+    // DB_DATABASE does not move -- so on a dev machine they can describe two
+    // different installs, and every row read as though they were one.
+    $default = (string) config('database.default');
+    $database = (string) config('database.connections.'.$default.'.database');
+
+    expect($database)->not->toBe('', 'The test environment has no database path to print.');
+
+    // Values read back rather than hardcoded: a fixed literal would satisfy
+    // these without the command reading anything. Safe to chain only because
+    // the two land on separate lines -- expectsOutputToContain consumes one
+    // line per call, so a same-line pair can never both match.
+    $this->artisan('beatrax:doctor')
+        ->expectsOutputToContain($default.': '.$database)
+        ->expectsOutputToContain(UserDataPathService::storageBase());
 });

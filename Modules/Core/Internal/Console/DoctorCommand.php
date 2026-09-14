@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Core\Internal\Console;
 
 use Illuminate\Console\Command;
+use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Modules\Core\Internal\Console\Probes\BackgroundScheduleProbe;
 use Modules\Core\Internal\Console\Probes\BackupFreshnessProbe;
 use Modules\Core\Internal\Console\Probes\ComposerVersionProbe;
@@ -20,6 +21,7 @@ use Modules\Core\Internal\Console\Probes\SqliteCliVersionProbe;
 use Modules\Core\Internal\Console\Probes\SynchronousModeProbe;
 use Modules\Core\Internal\Console\Probes\WalModeProbe;
 use Modules\Core\Internal\Services\SchemaShapeHealthCheck;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Ledger\Public\Services\FingerprintHealthCheck;
 use Modules\Ledger\Public\Services\SplitSumHealthCheck;
 use Modules\Search\Public\Services\FtsHealthCheck;
@@ -49,6 +51,7 @@ final class DoctorCommand extends Command
         private readonly HostTimezoneProbe $hostTimezoneProbe,
         private readonly OwnerBoundaryProbe $ownerBoundaryProbe,
         private readonly SchemaShapeHealthCheck $schemaShapeHealth,
+        private readonly ConfigRepository $config,
         private readonly ?FtsHealthCheck $ftsHealth = null,
         private readonly ?FingerprintHealthCheck $fingerprintHealth = null,
         private readonly ?SplitSumHealthCheck $splitSumHealth = null,
@@ -67,6 +70,8 @@ final class DoctorCommand extends Command
 
         $this->line('beatrax:doctor');
         $this->line('-----------------');
+        $this->line(sprintf(self::ROW_FORMAT, 'database', '', $this->inspectedDatabase()));
+        $this->line(sprintf(self::ROW_FORMAT, 'storage', '', UserDataPathService::storageBase()));
 
         // Every check runs through the same Probe -> ProbeResult ->
         // reportProbe pipeline so the output table is homogeneous and
@@ -131,6 +136,27 @@ final class DoctorCommand extends Command
         $this->info('All checks passed.');
 
         return self::SUCCESS;
+    }
+
+    // Rows split across two subjects and neither was named. The store-derived
+    // ones follow the default connection; the file-derived ones follow
+    // UserDataPathService, which DB_DATABASE does not move. On this machine
+    // they resolve to different installs, so the report mixed both silently.
+    private function inspectedDatabase(): string
+    {
+        $default = $this->config->get('database.default');
+
+        if (! is_string($default) || $default === '') {
+            return 'unknown';
+        }
+
+        $database = $this->config->get('database.connections.'.$default.'.database');
+
+        if (! is_string($database) || $database === '') {
+            return $default;
+        }
+
+        return $default.': '.$database;
     }
 
     /**
