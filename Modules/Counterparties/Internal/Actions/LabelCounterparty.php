@@ -14,6 +14,7 @@ use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Counterparties\Public\Support\CounterpartyDefaultName;
 use Modules\Sync\Public\Events\EntityMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
+use Modules\Sync\Public\Support\UnopenedValue;
 
 /**
  * @link ../../../../.docs/features/counterparties/triage-suggestions.md
@@ -77,13 +78,21 @@ final readonly class LabelCounterparty
         // that merges whole. Sent alone it lands on top of a peer's rename and
         // reads that reader's own words back as the placeholder.
         if (CounterpartyDefaultName::tokenIn($metadata) !== null) {
-            $fields['display_name'] = $this->codec->decryptValue(
+            $opened = $this->codec->decryptValue(
                 'counterparties',
                 'display_name',
                 $row->display_name,
                 $userId,
                 $session,
             )['value'];
+
+            // '' is what the codec answers for ciphertext no epoch here opened,
+            // and announcing it would hand a peer that CAN read the name a
+            // blank to overwrite it with. The token riding along without the
+            // name renders a placeholder there; losing the name does not undo.
+            if (! UnopenedValue::wasBlanked($row->display_name, $opened)) {
+                $fields['display_name'] = $opened;
+            }
         }
 
         $this->announce($row->id, $userId, $fields);

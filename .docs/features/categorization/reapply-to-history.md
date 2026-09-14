@@ -125,6 +125,17 @@ final text is only known after the write, so the value reported in
 payload — and it must be decrypted first, because the op log encrypts on
 write and would otherwise double-encrypt an already-encrypted value.
 
+That decrypt has a second answer, and `append` is the mode it matters to.
+`decryptValue()` returns `''` — not the stored bytes — for a value that
+looks like ciphertext and that no epoch on this device opened, so a
+device missing an epoch would append to nothing and re-seal the result
+over the note it was added to. `SetTransactionNote` reads the STORED
+value to tell that apart from an empty note, because `decrypted => false`
+is also the honest answer for a row written before encryption was
+enabled, and it makes the target equal what is already there so the
+existing no-change refusal answers. `set` is untouched: a reader or a
+rule replacing a note means to replace it.
+
 ## Related pages
 
 - [Rule evaluation order](rule-evaluation-order.md) — what the walk
