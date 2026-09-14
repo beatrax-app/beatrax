@@ -199,7 +199,8 @@
         ],
         "post-update-cmd": [
             "@php artisan native:install --force --quiet --publish",
-            "@php scripts/nativephp_forget_published_provider.php"
+            "@php scripts/nativephp_supply_pdf_page_size.php",
+        "@php scripts/nativephp_forget_published_provider.php"
         ]
     },
     "scripts-descriptions": {

@@ -371,6 +371,14 @@
       "runs_in": "quality shard",
       "why": "Gated on dns-sd or avahi-publish-service being on the host, and ubuntu-latest shipped neither — so it skipped in every job. The shard and coverage runners now install avahi-utils alongside poppler-utils; the binary is all the advertiser looks for."
     },
+    "tests/Contracts/AShippedDistImportsAFileItDidNotShipArchTest.php": {
+      "markers": 2,
+      "skipped": {
+        "quality shard": 0
+      },
+      "runs_in": "quality shard",
+      "why": "Both markers are gated on vendor/nativephp/desktop being installed, which every repo-root job installs from the lock. Not listed for the mobile-app job, which runs the Mobile testsuite only and never collects tests/Contracts \u2014 and which could not answer this one anyway, because nativephp/mobile and nativephp/desktop hard-conflict."
+    },
     "tests/Contracts/AStoreShapeIsBuiltBesideTheSideloadableOneArchTest.php": {
       "markers": 2,
       "skipped": {
