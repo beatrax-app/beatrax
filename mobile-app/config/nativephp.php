@@ -316,6 +316,12 @@ return [
         '.phpstan-cache',
         '.pint.cache',
 
+        // Python bytecode from .github/scripts/. Gitignored, which keeps it out
+        // of the repository and not off the disk a build runs on, so the
+        // packager would still copy whatever a local run left behind.
+        '__pycache__',
+        '*.pyc',
+
         // Everything below is a file the repository's own ignore list says may
         // sit at a shell root without being source. The packager copies the
         // working tree, so each one is copied unless it is named here, and

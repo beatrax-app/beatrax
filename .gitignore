@@ -139,3 +139,7 @@ yarn-error.log
 # from there lands the ledger, the keyring and the sync identity right here
 # at the repository root — one `git add -A` from being committed.
 /persisted_data
+
+# Python bytecode from .github/scripts/ — a committed .pyc is a binary in source.
+__pycache__/
+*.pyc
