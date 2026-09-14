@@ -20,6 +20,7 @@ use Modules\Ledger\Public\Dto\CanonicalTransaction;
 use Modules\Ledger\Public\Services\FieldProvenanceWriter;
 use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
+use Modules\Sync\Public\Support\UnopenedValue;
 use Modules\Tax\Public\Actions\TagTransaction;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -290,16 +291,23 @@ final class RuleApplier
             ? (int) $current->tax_year_override
             : null;
 
-        if ($currentDeductionCategoryId === $deductionCategoryId && $currentYear === $year) {
-            return false;
-        }
-
         // TagTransaction::updateExisting() rewrites note/category/year
         // together the instant any one is non-null, so passing a literal null
-        // here would silently wipe a user-authored tax note.
+        // here would silently wipe a user-authored tax note -- and so would the
+        // '' the codec answers for ciphertext no epoch here opened.
         $currentNote = $current !== null && is_string($current->note)
             ? $this->codec->decryptValue('tax_transaction_tags', 'note', $current->note, $userId, ($this->session)())['value']
             : null;
+
+        $unreadable = UnopenedValue::wasBlanked($current?->note, $currentNote);
+
+        if ($unreadable) {
+            $this->logSkip($ruleId, ActionType::TaxTag->value, 'the stored tax note did not open on this device');
+        }
+
+        if ($unreadable || ($currentDeductionCategoryId === $deductionCategoryId && $currentYear === $year)) {
+            return false;
+        }
 
         try {
             $this->tagTransaction->execute($userId, $transactionId, $deductionCategoryId, $currentNote, $year, null, 'rule');
