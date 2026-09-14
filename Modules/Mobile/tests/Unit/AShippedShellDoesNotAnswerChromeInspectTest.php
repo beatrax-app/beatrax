@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // WebView.setWebContentsDebuggingEnabled is process-wide and independent of
 // android:debuggable, so a release build answered chrome://inspect: live DOM
 // and JS heap of the ledger, and script execution in the app's own origin, to
@@ -119,4 +121,51 @@ it('is a no-op on a shell it has already patched', function (): void {
     runInspectionPatch($root);
 
     expect(patchedShell($root))->toBe($once);
+});
+
+/**
+ * The anchor read out of the patch script rather than spelled again here. A
+ * guard holding its own copy of the pattern it checks agrees with itself while
+ * both drift off the thing they are about.
+ */
+function inspectionAnchor(): string
+{
+    $found = PatternScan::first(
+        '/\$anchor = \'([^\']+)\';/',
+        (string) file_get_contents(inspectionPatchScript())
+    );
+
+    expect($found)->not->toBe([], 'The patch script no longer assigns $anchor a single-quoted literal, so this file cannot read what it looks for.');
+
+    return $found[1];
+}
+
+/** The upstream template the generated project is copied from, where it is installed */
+function inspectionUpstreamShell(): ?string
+{
+    $relative = 'vendor/nativephp/mobile/resources/androidstudio/app/src/main/java/com/nativephp/mobile/network/WebViewManager.kt';
+
+    foreach ([base_path($relative), base_path('mobile-app/'.$relative)] as $candidate) {
+        if (is_file($candidate)) {
+            return (string) file_get_contents($candidate);
+        }
+    }
+
+    return null;
+}
+
+// Every case above patches a shell this file wrote, with the anchor spelled the
+// way the script expects, so all of them pass whatever the vendor ships. The
+// patch skips on a missing anchor with a bare `return` after an echo, and
+// nativephp_patch_all collects only a non-zero exit — so a template whose line
+// moved leaves the gate unapplied, the build green, and the shipped APK
+// answering chrome://inspect. This is the one case that would see it.
+it('anchors against the shell the vendor actually ships', function (): void {
+    $upstream = inspectionUpstreamShell();
+
+    if ($upstream === null) {
+        test()->markTestSkipped('nativephp/mobile is installed only under the mobile Composer root, so the shipped WebView manager is not here to anchor against.');
+    }
+
+    expect($upstream)->toContain(inspectionAnchor());
 });

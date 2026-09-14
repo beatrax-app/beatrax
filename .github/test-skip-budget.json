@@ -216,6 +216,15 @@
       "runs_in": "mobile-app quality",
       "why": "Same gate and the same replacement: the shipped WebView client, present in both roots the pipeline builds."
     },
+    "Modules/Mobile/tests/Unit/AShippedShellDoesNotAnswerChromeInspectTest.php": {
+      "markers": 1,
+      "skipped": {
+        "quality shard": 1,
+        "mobile-app quality": 0
+      },
+      "runs_in": "mobile-app quality",
+      "why": "The case that anchors the inspection gate against the shell nativephp/mobile actually ships; the template it reads lives in that package's vendor tree, so only the mobile root can answer it. The five cases beside it patch a shell the file writes and run everywhere."
+    },
     "Modules/Mobile/tests/Unit/AWebViewErrorPageDoesNotRenderWhatItFailedOnTest.php": {
       "markers": 1,
       "skipped": {
