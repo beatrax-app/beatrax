@@ -9,9 +9,11 @@ declare(strict_types=1);
 // start. The workflow said so in a comment, claiming an Electron bundle cannot
 // be launched on a hosted runner; xvfb is the display it was missing.
 //
-// This pins the Linux leg, which is the one that has it. macOS, Windows and
-// Android are owed the same step, and adding one here is what makes this rule
-// cover it.
+// All three desktop legs now have it, and each is pinned inside its own job
+// rather than by position in the file, so a step that drifts into the wrong
+// job fails here instead of reading as covered. Android is deliberately not in
+// this list: an APK is installed onto a device or an emulator and has no
+// process a runner can ask for /health, so the same shape does not apply to it.
 // @link ../../scripts/desktop_smoke.sh
 
 const LAUNCH_WORKFLOW = '.github/workflows/release.yml';
@@ -37,19 +39,41 @@ it('finds the workflow and the smoke script to hold to each other', function ():
         ->and(launchRead(LAUNCH_SCRIPT))->not->toBe('', 'The smoke script is not where this rule looks.');
 });
 
-it('launches the Linux bundle and asks it for health before uploading it', function (): void {
+/** One job's body, so a step is read against the job it actually sits in. */
+function launchJobBody(string $job): string
+{
     $workflow = launchRead(LAUNCH_WORKFLOW);
+    $at = strpos($workflow, sprintf("\n    %s:\n", $job));
 
-    $smokeAt = strpos($workflow, LAUNCH_SCRIPT);
-    expect($smokeAt)->not->toBeFalse('No step in the release workflow runs '.LAUNCH_SCRIPT.', so no bundle is launched before it is published.');
+    if ($at === false) {
+        return '';
+    }
+
+    $next = preg_match('/\n    [a-z][a-z0-9-]*:\n/', $workflow, $m, PREG_OFFSET_CAPTURE, $at + 1) === 1
+        ? $m[0][1]
+        : strlen($workflow);
+
+    return substr($workflow, $at, $next - $at);
+}
+
+it('launches every desktop bundle and asks it for health before uploading it', function (string $job, string $upload): void {
+    $body = launchJobBody($job);
+    expect($body)->not->toBe('', sprintf('The release workflow has no %s job, so this rule read nothing about the bundle it builds.', $job));
+
+    $smokeAt = strpos($body, LAUNCH_SCRIPT);
+    expect($smokeAt)->not->toBeFalse(sprintf('No step in %s runs %s, so that bundle is published without anything ever starting it.', $job, LAUNCH_SCRIPT));
 
     // "before upload" is the half a step in the wrong place loses: a bundle
     // smoke-tested after upload has already been published when the test
     // speaks.
-    $uploadAt = strpos($workflow, 'name: Upload Linux artifacts');
-    expect($uploadAt)->not->toBeFalse('The Linux upload step was renamed, so this rule can no longer tell whether the smoke test runs before it.');
-    expect($smokeAt)->toBeLessThan($uploadAt, 'The smoke test runs after the Linux upload, so a bundle that cannot start is published before anything asks it.');
-});
+    $uploadAt = strpos($body, sprintf('name: %s', $upload));
+    expect($uploadAt)->not->toBeFalse(sprintf('The %s upload step is no longer called "%s", so this rule can no longer tell whether the smoke test runs before it.', $job, $upload));
+    expect($smokeAt)->toBeLessThan($uploadAt, sprintf('The smoke test in %s runs after its upload, so a bundle that cannot start is published before anything asks it.', $job));
+})->with([
+    'linux' => ['build-linux', 'Upload Linux artifacts'],
+    'macos' => ['build-macos', 'Upload macOS artifacts (arm64)'],
+    'windows' => ['build-windows', 'Upload Windows artifacts'],
+]);
 
 it('asks the bundle for the version the tag built, not merely for a reply', function (): void {
     $script = launchRead(LAUNCH_SCRIPT);
