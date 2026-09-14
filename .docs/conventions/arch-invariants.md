@@ -306,7 +306,10 @@ disagree with:
   now carry their own.
 
 `RepoTree`'s `skips` is where this costs the most: one more fragment there
-removes a subtree from all forty-nine guards reading that scope at once, and
+removes a subtree from every guard reading that scope at once — thirty-two of
+them read `EVERY_BLADE_VIEW`, twenty-four `PRODUCTION_PHP`, fourteen
+`EVERY_PHP_FILE` and nine `RUNTIME_DOMAIN_PHP`, out of seventy-two files that
+walk a scope at all — and
 the root accounting above cannot see it — `covers` still names the root and the
 walk still reaches files in it. The scope floors are now joined by the module
 census, and the skip fragments are pinned in
