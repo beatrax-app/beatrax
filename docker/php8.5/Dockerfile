@@ -5,7 +5,7 @@
 # NativePHP — this image is NOT a production runtime, it
 # only exists so the quality gates and the queue-worker behaviour can be
 # exercised locally on the same PHP version the bundle targets.
-FROM php:8.5-cli
+FROM php:8.5-cli@sha256:9ebdf4c28ab12c02085e171c31e22ac5f7bbb6a9f6927e3bc3dfe7ee23df51e0
 
 # mlocati's installer resolves each extension's build deps + ini config.
 COPY --from=mlocati/php-extension-installer:latest /usr/bin/install-php-extensions /usr/local/bin/

@@ -10,7 +10,7 @@
 # pdo_sqlite is the only driver installed (ADR-0022).
 
 # --- stage 1: build front-end assets (Vite / Tailwind) ---
-FROM node:22-bookworm-slim AS assets
+FROM node:22-bookworm-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5 AS assets
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci
@@ -19,7 +19,7 @@ COPY . .
 RUN npm run build
 
 # --- stage 2: FrankenPHP runtime ---
-FROM dunglas/frankenphp:php8.5 AS runtime
+FROM dunglas/frankenphp:php8.5@sha256:f92d81eb3fe4fd18b35d3d58192b7cc3acc8943817bbf39f2fcf0be02a3916dc AS runtime
 # install-php-extensions ships in the FrankenPHP image.
 RUN install-php-extensions \
         intl pcntl posix pdo_sqlite zip bcmath @composer

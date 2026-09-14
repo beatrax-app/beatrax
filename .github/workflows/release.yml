@@ -54,8 +54,12 @@ on:
     push:
         tags: ['v*']
 
+# Read at the top so a job that does not publish cannot write. The two that
+# do — `publish`, which creates the release, and `move-preview-feed`, which
+# retags it — raise it on themselves. Every other job here checks out, builds
+# and uploads an artifact, none of which needs write.
 permissions:
-    contents: write
+    contents: read
 
 env:
     TZ: Europe/Amsterdam
@@ -1211,6 +1215,9 @@ jobs:
         needs: [build-macos, build-windows, build-linux, build-android, smoke-server]
         runs-on: ubuntu-latest
         timeout-minutes: 10
+        # The one job that creates the release and edits it afterwards.
+        permissions:
+            contents: write
         steps:
             - name: Check out the source
               uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1

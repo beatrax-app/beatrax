@@ -1,6 +1,8 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>beatrax-app/.github"],
+  "extends": [
+    "github>beatrax-app/.github"
+  ],
   "ignorePaths": [
     "nativephp/**",
     "mobile-app/**",
@@ -10,17 +12,39 @@
   "packageRules": [
     {
       "description": "Framework majors land together or not at all — Laravel, Livewire and the module package are upgraded as one deliberate piece of work, never as a drive-by.",
-      "matchManagers": ["composer"],
-      "matchPackageNames": ["laravel/framework", "livewire/livewire", "nwidart/laravel-modules"],
-      "matchUpdateTypes": ["major"],
+      "matchManagers": [
+        "composer"
+      ],
+      "matchPackageNames": [
+        "laravel/framework",
+        "livewire/livewire",
+        "nwidart/laravel-modules"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
       "groupName": "framework majors",
-      "labels": ["dependencies", "release-blocker"]
+      "labels": [
+        "dependencies",
+        "release-blocker"
+      ]
     },
     {
       "description": "PHP itself is pinned to the bundled runtime; a bump is a platform decision, not a dependency update.",
-      "matchManagers": ["composer"],
-      "matchDepNames": ["php"],
+      "matchManagers": [
+        "composer"
+      ],
+      "matchDepNames": [
+        "php"
+      ],
       "enabled": false
+    },
+    {
+      "description": "Container images are pinned by digest so a tag cannot be moved under us; Renovate owns keeping the digest current. Scoped to dockerfile: the beatrax-app/spec workflows are referenced by a moving @v1 on purpose (OPS-R27) and must not be pinned.",
+      "matchManagers": [
+        "dockerfile"
+      ],
+      "pinDigests": true
     }
   ]
 }
