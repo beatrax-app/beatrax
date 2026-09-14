@@ -21,6 +21,7 @@ use Modules\Core\Internal\Console\Probes\SqliteCliVersionProbe;
 use Modules\Core\Internal\Console\Probes\SynchronousModeProbe;
 use Modules\Core\Internal\Console\Probes\WalModeProbe;
 use Modules\Core\Internal\Services\SchemaShapeHealthCheck;
+use Modules\Core\Public\Services\UserDataPathService;
 use Modules\Ledger\Public\Services\FingerprintHealthCheck;
 use Modules\Ledger\Public\Services\SplitSumHealthCheck;
 use Modules\Search\Public\Services\FtsHealthCheck;
@@ -69,7 +70,8 @@ final class DoctorCommand extends Command
 
         $this->line('beatrax:doctor');
         $this->line('-----------------');
-        $this->line(sprintf(self::ROW_FORMAT, 'reading', '', $this->inspectedDatabase()));
+        $this->line(sprintf(self::ROW_FORMAT, 'database', '', $this->inspectedDatabase()));
+        $this->line(sprintf(self::ROW_FORMAT, 'storage', '', UserDataPathService::storageBase()));
 
         // Every check runs through the same Probe -> ProbeResult ->
         // reportProbe pipeline so the output table is homogeneous and
@@ -136,10 +138,10 @@ final class DoctorCommand extends Command
         return self::SUCCESS;
     }
 
-    // Every database-derived row below describes whichever file the default
-    // connection resolves to, and this checkout holds two: artisan opens
-    // database.sqlite while the desktop runs on nativephp.sqlite. Unnamed,
-    // a report on the stale one reads exactly like one on the running app.
+    // Rows split across two subjects and neither was named. The store-derived
+    // ones follow the default connection; the file-derived ones follow
+    // UserDataPathService, which DB_DATABASE does not move. On this machine
+    // they resolve to different installs, so the report mixed both silently.
     private function inspectedDatabase(): string
     {
         $default = $this->config->get('database.default');
