@@ -9,21 +9,24 @@ public.
 ## Reporting a vulnerability
 
 Use GitHub's **Private vulnerability reporting** feature, not the
-public Issues tab:
+public Issues tab. The form opens directly at:
 
-1. Go to the repository on GitHub.
-2. Click the **Security** tab.
-3. Click **Report a vulnerability**.
-4. Fill in the form with as much detail as you can — reproduction steps,
-   affected versions, and impact analysis are all helpful.
+<https://github.com/beatrax-app/beatrax/security/advisories/new>
+
+Or reach it by hand: the repository's **Security** tab, then **Report a
+vulnerability**. Fill in the form with as much detail as you can —
+reproduction steps, affected versions, and impact analysis are all
+helpful.
 
 The report stays private between you and the maintainers until a fix
 ships and we publish a coordinated disclosure.
 
 If for some reason private vulnerability reporting is disabled or
-inaccessible to you, do not open a public issue with the details. Reach
-out through a private channel first and we'll re-enable the reporting
-flow.
+inaccessible to you, do not open a public issue with the details. GitHub
+documents the feature and its prerequisites at
+<https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability>;
+reach out through a private channel first and we'll re-enable the
+reporting flow.
 
 ## Scope
 

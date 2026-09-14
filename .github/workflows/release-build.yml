@@ -37,8 +37,10 @@ on:
                 required: true
                 type: string
 
+# This workflow publishes nothing — it builds the four bundles and uploads
+# them as artifacts. Write was never used.
 permissions:
-    contents: write
+    contents: read
 
 env:
     TZ: Europe/Amsterdam
