@@ -14,6 +14,7 @@ use Modules\Counterparties\Public\Enums\CounterpartyType;
 use Modules\Counterparties\Public\Support\CounterpartyDefaultName;
 use Modules\Sync\Public\Events\EntityMutated;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
+use Modules\Sync\Public\Support\UnopenedValue;
 
 /**
  * @link ../../../../.docs/features/counterparties/triage-suggestions.md
@@ -89,7 +90,7 @@ final readonly class LabelCounterparty
             // and announcing it would hand a peer that CAN read the name a
             // blank to overwrite it with. The token riding along without the
             // name renders a placeholder there; losing the name does not undo.
-            if ($opened !== '') {
+            if (! UnopenedValue::wasBlanked($row->display_name, $opened)) {
                 $fields['display_name'] = $opened;
             }
         }

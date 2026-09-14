@@ -13,6 +13,7 @@ use Modules\Ledger\Public\Contracts\SetsTransactionNote;
 use Modules\Ledger\Public\Services\TransactionStatusQuery;
 use Modules\Search\Public\Contracts\SearchIndexWriterContract;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
+use Modules\Sync\Public\Support\UnopenedValue;
 
 // mode='set': trimmed $text replaces the note outright, blank input
 // normalises to NULL. mode='append': trimmed $text is concatenated
@@ -49,16 +50,14 @@ final readonly class SetTransactionNote implements SetsTransactionNote
             : null;
         $trimmed = $text === null ? '' : trim($text);
 
-        // '' out of a non-empty stored value is the codec blanking ciphertext
-        // no epoch here opened. Appending to that writes the addition alone and
-        // re-seals it over the note it was added to, which is the one mode
-        // whose whole meaning is that what is already there stays.
-        if ($mode === NoteMode::Append->value && is_string($row->note) && $row->note !== '' && $currentNote === '') {
-            return 0;
-        }
-
         if ($mode === NoteMode::Append->value) {
-            $target = self::appended($currentNote, $trimmed);
+            // Appending to a note this device could not open writes the
+            // addition alone and re-seals it over the note it was added to.
+            // The target is then what is already there, so the no-change
+            // refusal below is the one that answers.
+            $target = UnopenedValue::wasBlanked($row->note, $currentNote)
+                ? $currentNote
+                : self::appended($currentNote, $trimmed);
         } else {
             $target = $trimmed === '' ? null : $trimmed;
         }
