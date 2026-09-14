@@ -23,7 +23,7 @@ uses(RefreshDatabase::class);
 const TEXT_COLUMNS_THAT_NAME_NO_COVERED_ROW = [
     'anomaly_alerts.reasons' => 'the words the evaluator flagged the row for -- "large", "duplicate", "first_time" -- and not one of them is an id',
     'chain_links.evidence' => 'what the resolver measured: matched amounts, day offsets, tolerances, and original_reference_id, which is the SELLER\'s order number and names nothing in this database',
-    'counterparties.metadata' => 'the matched keyword and the merge provenance, and that provenance records the absorbed rows by name and slug rather than by id, precisely because the ids are gone',
+    'counterparties.metadata' => 'the reader\'s own triage answers (ignored, subcategory, default_name), the keyword a bank-fee rule matched, the bridge account kind, and the merge provenance -- which records the absorbed rows by slug: not by id, because the ids are gone, and not by the sealed display_name the slug is derived from, because this column is on no encryption list',
     'forecast_scenarios.description' => 'free text the reader writes about a what-if',
     'forecast_scenario_mutations.payload' => 'the mutation itself -- currency, date, amount, direction, note. The series it applies to is target_series_id, a column of its own, declared in UNCONSTRAINED_PARENTS',
     'import_runs.row_issues' => 'one entry per refused row: kind, the row INDEX inside the file, reason and detail',

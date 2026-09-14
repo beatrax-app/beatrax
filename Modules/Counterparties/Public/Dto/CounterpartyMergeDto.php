@@ -12,7 +12,7 @@ use Modules\Sync\Public\Events\EntityMutated;
 final readonly class CounterpartyMergeDto
 {
     /**
-     * @param  list<array{name: string, slug: string, moved: int}>  $absorbed
+     * @param  list<array{slug: string, moved: int}>  $absorbed
      * @param  list<EntityMutated>  $events
      */
     public function __construct(

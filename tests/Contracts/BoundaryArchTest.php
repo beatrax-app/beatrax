@@ -2477,6 +2477,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Core/tests/Feature/LocaleSelectionTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Core/tests/Feature/TheSettingsCopyOfTheAmountToggleCannotDriftTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Core/tests/Unit/LockStoreTest.php -> Modules\\Chains\\Internal\\Jobs\\ResolveChainLinksJob',
+        'Modules/Counterparties/tests/Feature/AFoldLeavesNoReadableCopyOfASealedNameTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Counterparties/tests/Feature/CounterpartyEncryptionTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Counterparties/tests/Feature/ResolveCounterpartyStageTest.php -> Modules\\Import\\Internal\\Pipeline\\ImportPipeline',
         'Modules/Desktop/tests/Feature/ALivenessDialIsNotAFailedHandshakeTest.php -> Modules\\Sync\\Internal\\Transport\\Relay\\RelayConfig',
