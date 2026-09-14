@@ -61,14 +61,17 @@ final readonly class MergeCounterparties implements MergesCounterparties
 
         /** @var list<EntityMutated> $events */
         $events = [];
-        /** @var list<array{name: string, slug: string, moved: int}> $absorbed */
+        /** @var list<array{slug: string, moved: int}> $absorbed */
         $absorbed = [];
         $moved = 0;
 
         foreach ($this->absorbedRows($byName, $survivorId) as $row) {
             $carried = $this->foldRow($userId, self::toInt($row->id), $survivorId, $events);
+            // By slug, never the display_name it shadows: `metadata` is on no
+            // encryption list and display_name is sealed, so a name here is the
+            // sealed value in the clear one column over, and this fold deletes
+            // the row it was sealed on.
             $absorbed[] = [
-                'name' => $this->displayNameOf($row, $userId),
                 'slug' => self::toString($row->slug ?? null),
                 'moved' => $carried,
             ];
@@ -258,7 +261,7 @@ final readonly class MergeCounterparties implements MergesCounterparties
     // it: left on its old name, the fold is undone by the very import it exists
     // to keep on one row.
     /**
-     * @param  list<array{name: string, slug: string, moved: int}>  $absorbed
+     * @param  list<array{slug: string, moved: int}>  $absorbed
      * @param  list<EntityMutated>  $events
      */
     private function rewriteSurvivor(int $userId, stdClass $survivor, string $survivingName, array $absorbed, array &$events): void
@@ -325,7 +328,7 @@ final readonly class MergeCounterparties implements MergesCounterparties
     // onto the row that survived it, the way merchant_aliases.merged_from
     // records the same event one table over.
     /**
-     * @param  list<array{name: string, slug: string, moved: int}>  $absorbed
+     * @param  list<array{slug: string, moved: int}>  $absorbed
      * @return array<string, mixed>
      */
     private function provenanceFor(stdClass $survivor, array $absorbed): array

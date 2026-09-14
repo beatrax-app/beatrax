@@ -192,7 +192,7 @@ it('announces every row the merge repoints and the counterparty it removes', fun
     expect($removed)->not->toBeEmpty('The counterparty the merge removed was never announced, so the peer keeps it.');
 });
 
-it('records on the surviving counterparty which names it absorbed', function (): void {
+it('records on the surviving counterparty which rows it absorbed', function (): void {
     $descriptionA = 'BCK*SHELL PIETER NIEUW A *0001';
     $descriptionB = 'BCK*SHELL PIETER NIEUW B *0002';
 
@@ -216,7 +216,11 @@ it('records on the surviving counterparty which names it absorbed', function ():
     $metadata = is_string($survivor->metadata ?? null) ? json_decode((string) $survivor->metadata, true) : [];
     $absorbed = is_array($metadata) && is_array($metadata['merged_from'] ?? null) ? $metadata['merged_from'] : [];
 
-    expect(array_column($absorbed, 'name'))->toBe(['Shell Pieter B']);
+    // By slug. display_name is sealed and this column is not, so the name
+    // here would be the sealed value in the clear, and the absorbed row it was
+    // sealed on is deleted by the same fold.
+    expect(array_column($absorbed, 'slug'))->toBe(['shell-pieter-b'])
+        ->and($absorbed[0] ?? [])->not->toHaveKey('name');
 });
 
 // The foreign key is nullOnDelete and a null counterparty_id matches every
