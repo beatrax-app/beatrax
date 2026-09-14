@@ -848,8 +848,10 @@ final class DemoTransactionsSeeder
             ->first() ?? throw new IdReadBackFailedException('import_runs');
     }
 
-    // insertOrIgnore, so a re-seed is a no-op: the fingerprint UNIQUE and
-    // the v3 tuple UNIQUE both catch a duplicate.
+    // A re-seed is a no-op on source_ref, which nothing rewrites. The two
+    // UNIQUEs cannot be what makes it one: IcsSettlementAligner rewrites the
+    // settlement legs' amount after insert, so for those four rows neither the
+    // tuple nor the digest still matches what this composes. insertOrIgnore stays.
     /**
      * @param  array{type: string, amountMinor: int, description: string, counterpartyName: ?string, counterpartyIban: ?string, date: CarbonImmutable, paymentType: PaymentType, categoryId: ?int, currency?: string, settledAmountMinor?: int, settledCurrency?: string, ref?: ?DemoTransactionRef}  $row
      */
@@ -875,6 +877,10 @@ final class DemoTransactionsSeeder
         $sourceRef = $ref instanceof DemoTransactionRef
             ? $ref->tagged($user->id, $account->id, $rowIndex)
             : DemoTransactionRef::plain($user->id, $account->id, $rowIndex);
+
+        if ($this->alreadySeeded($user, $sourceRef)) {
+            return 0;
+        }
 
         $canonical = new CanonicalTransaction(
             userId: $user->id,
@@ -919,5 +925,13 @@ final class DemoTransactionsSeeder
         $attrs = $this->codec->encryptAttrs('transactions', $attrs, $user->id, ($this->session)());
 
         return Transaction::query()->insertOrIgnore($attrs);
+    }
+
+    private function alreadySeeded(User $user, string $sourceRef): bool
+    {
+        return Transaction::query()
+            ->where('user_id', $user->id)
+            ->where('source_ref', $sourceRef)
+            ->exists();
     }
 }

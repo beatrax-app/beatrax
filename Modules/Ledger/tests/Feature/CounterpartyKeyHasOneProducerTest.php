@@ -26,6 +26,7 @@ function counterpartyKeyPassThroughs(): array
     return [
         'Modules/Ledger/Public/Dto/CanonicalTransaction.php' => 'The DTO copies its own already-produced value into each wither and into toAttributes().',
         'Modules/Ledger/Internal/Listeners/RederiveFingerprintOnMergedRows.php' => 'Reads the merged row\'s stored key back into the tuple it recomposes the fingerprint from; holds no session key and derives none.',
+        'Modules/Ledger/Database/Seeders/Demo/IcsSettlementAligner.php' => 'Reads the stored value back into the tuple it recomposes the digest from after rewriting the amount; writes no key and derives none.',
         'Modules/Ledger/Public/Services/FingerprintHealthCheck.php' => 'Reads the stored value into the tuple it recomposes a digest from, to compare against the stored one; writes no column and derives no key.',
         'Modules/Ledger/Internal/Services/FingerprintRederiveService.php' => 'Reads the stored value back and echoes it into a canonical to recompose the fingerprint over it.',
         'Modules/Ledger/Public/Services/CounterpartyKeyBackfill.php' => 'The enable-time sweep, which derives under a key handed to it rather than resolved from a session.',
