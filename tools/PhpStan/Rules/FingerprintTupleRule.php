@@ -50,17 +50,15 @@ final class FingerprintTupleRule implements Rule
      */
     public function processNode(Node $node, Scope $scope): array
     {
-        if (! $node->name instanceof Node\Identifier || $node->name->toLowerString() !== 'update') {
-            return [];
-        }
-
-        if (! $this->targetsTransactions($node->var, $scope)) {
-            return [];
-        }
-
         $args = $node->getArgs();
 
-        if ($args === []) {
+        // Ordered cheapest first: targetsTransactions() asks the scope for a
+        // type, which is the expensive half, and only an update() with an
+        // argument can be a subject at all.
+        if (! $node->name instanceof Node\Identifier
+            || $node->name->toLowerString() !== 'update'
+            || $args === []
+            || ! $this->targetsTransactions($node->var, $scope)) {
             return [];
         }
 
@@ -101,24 +99,17 @@ final class FingerprintTupleRule implements Rule
             return true;
         }
 
-        while (true) {
-            if ($expr instanceof MethodCall) {
-                if ($this->namesTheTable($expr)) {
-                    return true;
-                }
-
-                $expr = $expr->var;
-
-                continue;
+        while ($expr instanceof MethodCall) {
+            if ($this->namesTheTable($expr)) {
+                return true;
             }
 
-            if ($expr instanceof StaticCall) {
-                return $expr->class instanceof Node\Name
-                    && $scope->resolveName($expr->class) === self::MODEL;
-            }
-
-            return false;
+            $expr = $expr->var;
         }
+
+        return $expr instanceof StaticCall
+            && $expr->class instanceof Node\Name
+            && $scope->resolveName($expr->class) === self::MODEL;
     }
 
     private function namesTheTable(MethodCall $call): bool
