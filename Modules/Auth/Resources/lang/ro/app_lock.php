@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'error_enroll_unsupported' => 'Această versiune de Beatrax nu are unde să păstreze o cheie de deblocare, așa că deblocarea biometrică nu este oferită. Limitarea nu este dispozitivul tău.',
+    'error_enroll_device_refused' => 'Dispozitivul tău nu a oferit deblocare biometrică. Dacă poate folosi amprentă sau față, salvează una în setările dispozitivului și încearcă din nou — până atunci codul tău PIN este aici singura deblocare.',
     'error_enroll_unprotected' => 'Deblocarea biometrică are nevoie de un depozit de chei al sistemului de operare, iar această instalare nu are niciunul. Înregistrarea ar lăsa cheia de deblocare lizibilă lângă datele tale, așa că nu este oferită aici.',
     'error_enroll_failed' => 'Dispozitivul tău a refuzat să stocheze cheia. Deblocarea biometrică nu este disponibilă.',
     'error_enroll_pin_expired' => 'Confirmarea cu codul PIN a expirat înainte ca dispozitivul să termine. Introdu codul PIN și încearcă din nou.',

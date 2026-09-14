@@ -43,13 +43,31 @@
             <p class="text-sm text-rose-600 dark:text-rose-400" role="alert">{{ $flashMessage }}</p>
         @endif
 
+        {{-- Stated before the choice, not after a press. A plain paragraph
+             rather than role="alert": this is the standing state of the device
+             when the modal opens, not something that just changed, and it is
+             named as the disabled card's description so the reason reaches a
+             reader who arrives on the control itself. --}}
+        @unless ($canShowACode)
+            <p id="pairing-show-code-unavailable" class="text-sm text-rose-600 dark:text-rose-400">
+                {{ Lang::get('sync::pairing.cannot_be_answered') }}
+            </p>
+        @endunless
+
         <div class="grid gap-3 sm:grid-cols-2">
             <button
                 type="button"
-                wire:click="showMyCode"
-                class="flex min-h-[44px] flex-col items-start gap-1 rounded-xl border border-slate-200 bg-white p-4 text-left
-                       hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2
-                       dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800 dark:focus-visible:ring-slate-100"
+                @unless ($canShowACode)
+                    disabled
+                    aria-describedby="pairing-show-code-unavailable"
+                @else
+                    wire:click="showMyCode"
+                @endunless
+                @class([
+                    'flex min-h-[44px] flex-col items-start gap-1 rounded-xl border p-4 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 dark:focus-visible:ring-slate-100',
+                    'border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800' => $canShowACode,
+                    'cursor-not-allowed border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-800/60' => ! $canShowACode,
+                ])
             >
                 <svg class="h-6 w-6 text-slate-700 dark:text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5zM13.5 19.125v-2.625m0 0V13.5m0 3h3m-3 0h-1.5" />

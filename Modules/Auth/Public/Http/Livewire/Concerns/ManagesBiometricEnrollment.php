@@ -13,6 +13,7 @@ use Modules\Auth\Internal\Lock\BiometricDeviceStore;
 use Modules\Auth\Internal\Lock\BrowserEnrollmentAuthorizer;
 use Modules\Auth\Internal\Lock\ColdStartEnroller;
 use Modules\Auth\Internal\Lock\ColdStartEnrollmentResult;
+use Modules\Auth\Internal\Lock\NullColdStartVault;
 use Modules\Auth\Internal\Lock\PinVerificationService;
 use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Core\Public\Contracts\CurrentUser;
@@ -45,7 +46,7 @@ trait ManagesBiometricEnrollment
         // Both roads ask for the PIN, and the browser one is asked whether it
         // exists first: a reader on a dead road should be told so rather than
         // handed a code box that leads nowhere.
-        $refusal = $vault->isAvailable() ? null : $this->browserEnrollmentRefusal($config, $shield);
+        $refusal = $vault->isAvailable() ? null : $this->browserEnrollmentRefusal($vault, $config, $shield);
 
         if ($refusal !== null) {
             $this->flashMessage = $refusal;
@@ -60,12 +61,19 @@ trait ManagesBiometricEnrollment
     // Reached only once the OS vault above turned out to be unavailable: both
     // answers here are about the browser road specifically, and a device with
     // its own vault never travels it.
-    private function browserEnrollmentRefusal(ConfigRepository $config, SecretShield $shield): ?string
+    private function browserEnrollmentRefusal(ColdStartVault $vault, ConfigRepository $config, SecretShield $shield): ?string
     {
+        $inAShell = $config->get('nativephp-internal.running') === true;
+
         return match (true) {
-            // Same dead-button case as an unavailable vault, with nothing left
-            // to fall back on: say so rather than dispatching into nothing.
-            $config->get('nativephp-internal.running') === true => Lang::get('auth::app_lock.error_enroll_unsupported'),
+            // Nothing bound but the null vault: the build really has nowhere to
+            // put a key, and the device is not the limitation.
+            $inAShell && $vault instanceof NullColdStartVault => Lang::get('auth::app_lock.error_enroll_unsupported'),
+            // A vault IS bound and it said no. Told apart because saying
+            // otherwise lies to the one reader who can act: an iPhone with no
+            // face enrolled was told the build had nowhere to store a key, two
+            // rows under the offer to store one.
+            $inAShell => Lang::get('auth::app_lock.error_enroll_device_refused'),
             // The browser path persists the unwrapping key beside the key it
             // unwraps, in the same file as the ledger. Only a shield that really
             // makes those bytes unreadable earns that; a self-hosted web install

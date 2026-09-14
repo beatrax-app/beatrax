@@ -236,7 +236,14 @@
 
         {{-- 3c: Biometric enrollment row
 
-             Detects browser WebAuthn capability and tells the server.
+             Detects browser WebAuthn capability and tells the server — and
+             only where nothing better has already answered. In a shell the
+             vault answers off the platform before the page ships, and this
+             probe used to overwrite that answer with its own: a WKWebView
+             exposes window.PublicKeyCredential whatever the enclave says, so
+             an iPhone with no face enrolled was offered an enrolment the
+             platform had already refused, once per render. The A51 hid the
+             defect by having no WebAuthn at all.
 
              The comment lives HERE, not inside x-init: Alpine compiles an
              attribute as an expression, so a leading `//` pushes the real code
@@ -247,7 +254,9 @@
         <div
             class="py-1"
             x-data="{}"
-            x-init="if (window.PublicKeyCredential) { $wire.set('biometricCapable', true) }"
+            @unless ($platformOwnsTheAnswer)
+                x-init="if (window.PublicKeyCredential) { $wire.set('biometricCapable', true) }"
+            @endunless
         >
             @if ($biometricCapable || $biometricEnrolled)
                 {{-- Capable platform: show enroll/de-enroll controls --}}

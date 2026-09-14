@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'error_enroll_unsupported' => 'Sellel Beatraxi versioonil pole kohta, kuhu avamisvõti salvestada, seega biomeetrilist avamist ei pakuta. Piirang ei ole sinu seade.',
+    'error_enroll_device_refused' => 'Sinu seade ei pakkunud biomeetrilist avamist. Kui see oskab sõrmejälge või nägu, salvesta üks seadme seadetes ja proovi uuesti — seniks avab siin ainult sinu PIN-kood.',
     'error_enroll_unprotected' => 'Biomeetriline avamine vajab operatsioonisüsteemi võtmehoidlat ja sellel paigaldusel seda pole. Registreerimine jätaks avamisvõtme sinu andmete kõrvale loetavaks, seega seda siin ei pakuta.',
     'error_enroll_failed' => 'Seade keeldus võtit salvestamast. Biomeetriline avamine pole saadaval.',
     'error_enroll_pin_expired' => 'PIN-koodi kinnitus aegus enne, kui seade jõudis lõpetada. Sisesta oma PIN-kood ja proovi uuesti.',

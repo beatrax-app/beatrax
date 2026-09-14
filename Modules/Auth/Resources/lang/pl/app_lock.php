@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'error_enroll_unsupported' => 'Ta wersja Beatraxa nie ma gdzie przechowywać klucza odblokowującego, więc odblokowanie biometryczne nie jest oferowane. Ograniczeniem nie jest Twoje urządzenie.',
+    'error_enroll_device_refused' => 'Twoje urządzenie nie zaoferowało odblokowania biometrycznego. Jeśli obsługuje odcisk palca lub twarz, zapisz go w ustawieniach urządzenia i spróbuj ponownie — do tego czasu jedynym odblokowaniem jest tutaj Twój PIN.',
     'error_enroll_unprotected' => 'Odblokowanie biometryczne wymaga magazynu kluczy systemu operacyjnego, a ta instalacja go nie ma. Rejestracja pozostawiłaby klucz odblokowujący czytelny obok Twoich danych, więc nie jest tu oferowana.',
     'error_enroll_failed' => 'Urządzenie odmówiło zapisania klucza. Odblokowanie biometryczne jest niedostępne.',
     'error_enroll_pin_expired' => 'Potwierdzenie PIN-em wygasło, zanim urządzenie zakończyło. Wpisz PIN i spróbuj ponownie.',

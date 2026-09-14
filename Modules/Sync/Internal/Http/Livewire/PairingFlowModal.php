@@ -683,7 +683,7 @@ final class PairingFlowModal extends Component
         $this->dispatch('pairing-closed');
     }
 
-    public function render(ViewFactory $views): View
+    public function render(ViewFactory $views, PairingAnswerability $answerability): View
     {
         // Under its own name, not $step: view data cannot shadow a public
         // property, and the view needs the resolved enum rather than the raw
@@ -691,6 +691,11 @@ final class PairingFlowModal extends Component
         return $views->make('sync::livewire.pairing-flow-modal', [
             'wizardStep' => $this->currentStep(),
             'offersATypedCode' => $this->offersATypedCode(),
+            // Asked here as well as in showMyCode(), because the requirement is
+            // about the OFFER and not only the ceremony: a card that draws
+            // enabled and refuses on press has already offered a code nothing
+            // could answer. The guard there stays for a crafted request.
+            'canShowACode' => $answerability->canBeAnswered(),
         ]);
     }
 }

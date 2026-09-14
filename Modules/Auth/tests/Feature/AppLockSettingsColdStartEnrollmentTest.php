@@ -7,6 +7,7 @@ use Illuminate\Contracts\Session\Session;
 use Livewire\Livewire;
 use Mockery\MockInterface;
 use Modules\Auth\Internal\Lock\AppLockProvisioner;
+use Modules\Auth\Internal\Lock\NullColdStartVault;
 use Modules\Auth\Public\Contracts\ColdStartVault;
 use Modules\Auth\Public\Http\Livewire\AppLockSettingsSection;
 use Modules\Auth\Public\Services\AppLockKeyService;
@@ -182,7 +183,11 @@ it('refuses in the shell rather than dispatching into nothing, and does not blam
     $user = coldStartSettingsUser('cold-shell');
     $this->actingAs($user);
     app(AppLockProvisioner::class)->enable($user->id, '123456', 'settings-pass');
-    bindColdStartVault(available: false);
+    // The null vault, not a double answering false: this case is the build
+    // with nowhere to put a key, and that is the only shape the sentence below
+    // describes. A bound vault that refuses is a DEVICE that refused, and
+    // saying "your device is not the limitation" to one of those is a lie.
+    app()->instance(ColdStartVault::class, new NullColdStartVault);
     app(ConfigRepository::class)->set('nativephp-internal.running', true);
 
     Livewire::test(AppLockSettingsSection::class)
