@@ -32,10 +32,6 @@ const SCANNERS_NAMING_THEIR_OWN_ROOTS = [
         'reason' => 'the runtime domain code, which is what the rules reading it are about: money that names its currency, a date refused rather than normalised, a column a screen reads back. routes, config and bootstrap are wiring, database is schema and seed, and scripts runs on a build machine and never ships -- widening this walk would not find those rules more subjects, it would ask them about files they do not describe. The build scripts are not unguarded: the checked-regex seams reach them, which is where a give-up that blanks the Android manifest was found',
         'proves' => "base_path('Modules')",
     ],
-    'tests/Contracts/Support/SonarSourceFiles.php' => [
-        'reason' => 'sonar.sources and nothing wider: a guard standing in for the hosted analysis fails on files the dashboard will never mention, which is the failure mode that gets a guard switched off',
-        'proves' => 'sonar-project.properties',
-    ],
     'tests/Contracts/Support/WalkCensus.php' => [
         'reason' => 'Modules is this walk\'s subject rather than its scope: it answers which modules a caller\'s walk reached, so it enumerates the module directories themselves and reads no scope of its own. A root list would make it a scanner, and it judges no file',
         'proves' => 'Modules/*',

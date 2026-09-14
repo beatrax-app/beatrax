@@ -39,10 +39,18 @@ list for the same reason: there is nothing to pin.
 
 ## The scope every guard reads
 
-`sonar.sources` and nothing wider: `app`, `Modules`, `config`, `routes` and
-`database`, minus the exclusions in `sonar-project.properties`, minus the test
-roots. A guard reading a wider tree fails on files the dashboard will never
-mention, which is the failure mode that gets a guard switched off.
+`sonar.sources` and nothing wider, minus the exclusions in
+`sonar-project.properties`, minus the test roots. A guard reading a *wider* tree
+fails on files the dashboard will never mention, which is the failure mode that
+gets a guard switched off. One reading a *narrower* tree is worse: it goes green
+on files the dashboard does mention, and reads as coverage.
+
+The roots are **read out of `sonar-project.properties` at run time, not copied
+from it**. They were copied once, `sonar.sources` grew `tools/PhpStan`, and the
+copy did not — so every guard on this page was blind to a directory SonarCloud
+scans. An S1142 finding landed there and all of them stayed green. Derived, the
+two cannot disagree again, and a missing or empty `sonar.sources` raises rather
+than quietly walking nothing.
 
 Test files are excluded on evidence rather than on the rule's declared scope:
 across this project's whole issue history, not one finding of any rule has ever
@@ -50,7 +58,7 @@ been raised in a test file. The fakes and spies living there would be failures
 nothing else agrees with.
 
 [`SonarSourceFiles`](../../tests/Contracts/Support/SonarSourceFiles.php) is that
-scope, and the tokeniser the three guards share. It drops comments as well as
+scope, and the tokeniser the four guards share. It drops comments as well as
 whitespace, because every reader below decides on what sits *directly* beside a
 token — the name after `function`, the `::` before `class`, the `:` before a
 `?` — and one docblock left in the stream separates those pairs and the reader
