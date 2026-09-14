@@ -6679,6 +6679,28 @@ mark {
 }
 
 /*
+ * The same content basis, for a narrow window that no finger is pointing at.
+ * The coarse-pointer block above gives `.flex-1` one because a zero-basis item
+ * never widens the row it is in — it takes the leftovers, and beside a column
+ * that will not shrink the leftovers are a few pixels. None of that is about
+ * the pointer: a desktop window dragged narrow is the same row at the same
+ * width, and `rememberState()` reopens it there. Measured across 42 routes at
+ * 390px with a mouse: /notifications went from nine clipped runs to none, no
+ * other route moved, and nothing new crossed an edge.
+ *
+ * `width < 40rem` rather than `max-width: 640px`: it is the exact complement of
+ * Tailwind's `sm:` — which is `min-width: 40rem`, so a max-width of the same
+ * 40rem would have both apply at once — and it stays the complement when the
+ * reader's text size moves the root out from under both of them.
+ */
+@media (width < 40rem) {
+    .flex-1 {
+        flex-basis: auto;
+    }
+}
+
+
+/*
  * The rules table, restacked below the tablet breakpoint.
  *
  * Six columns — priority, conditions, actions, hits, created, row actions —

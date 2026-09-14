@@ -557,6 +557,95 @@ answered `none_enrolled`. The one thing the reader could act on — enrol a face
 — is the one thing the copy tells them not to bother with. Evidence:
 `e5-r28-enroll-refusal-ios.png`.
 
+## Walked — narrow widths and the locales that expand
+
+Walked on 2026-09-14 against `9c8602497`, on a served instance at 320, 375,
+390, 640 and 1440, in English and in Slovenian.
+
+**Why Slovenian.** Not because a long language was wanted in the abstract: the
+26 locale trees were compared key by key against English first. All 25
+non-English locales carry exactly the same 3450 comparable keys, and Slovenian
+expands hardest at the 95th percentile — **1.91x** — with Greek behind it at
+1.88x. German, the reflex choice, is 1.67x and would have found less. The
+measurement is cheap and repeatable, and it is what picked the locale.
+
+**The sweep, and what it does not cover.** 42 authenticated routes, fetched and
+their body swapped into the live document so the media queries evaluate against
+the real viewport. An iframe was tried first and does not work — the app's own
+CSP blocks framing, so `contentDocument` is null. The swap runs the server's
+HTML **without Livewire or Alpine**, so anything laid out by script — chart axis
+ticks, finding 5 above — is outside what it measured.
+
+**The detector was positively controlled before any of its zeroes were
+believed.** A 580px element planted in a 390px viewport: 0 offenders before, 1
+after and it was the planted one, 0 again once removed. Worth doing — the first
+detector written here scored 0 on `/inboxes`, the page that prompted it,
+because `truncate` sets `overflow: hidden` and the clipping never reaches an
+ancestor's `scrollWidth`. A control written from one observation shared its
+blind spot; the one that found anything measures the clipped element itself.
+
+Overflow past the viewport: **zero** on all 42 routes, at 390 and at 1440, in
+both locales. The defects below are not overflow. They are text that fits
+inside a box drawn far too small for it, which is why a sweep looking only for
+overflow — including the one recorded in this file's own notification-row
+comment, *"measured at 375px and 411px: nothing overflows"* — reported clean.
+
+### What this walk found
+
+Numbered on from the ten above.
+
+**Both are fixed**, in the pull request this row arrives in, and both are one
+shape: a column that will not shrink beside the column carrying what the row is
+actually about. The rigid column wins, and the identity is what disappears.
+
+| # | Fixed by | Re-measured |
+|---|---|---|
+| 11 | The inbox row stacks below `sm` and is a row above it, the way the drift row and the system alert already are; its action cluster wraps and is rigid only once there is a row to be rigid in | Address column 72px -> 324px at 390, 0px -> 309px in Slovenian at 375; clipped runs on the page 3 -> 0; the action cluster 17px past its card -> 0. At 1440 the address column is 706px on one line, unchanged |
+| 12 | `.flex-1` takes a content basis below `sm` as well as at a coarse pointer | `/notifications` clipped runs 9 -> 0 at 390 with a mouse; no other of the 42 routes moved and nothing new crossed an edge; at 640 `.flex-1` computes back to a `0%` basis |
+
+### 11. Two inboxes both draw as "demo-1+..." with a Disconnect beside each (phone)
+
+**G4-R1 surface. 390x844, English — and it is worse, not better, in the other
+25 locales.** The row is `flex ... justify-between` with the address column
+`min-w-0 flex-1` and the action column `shrink-0`. The actions take their full
+236px of a 358px row and the address takes what is left:
+
+| row | address needs | address gets | actions |
+|---|---|---|---|
+| `demo-1+gmail@beatrax.local` | 179px | 72px | 236px |
+| `demo-1+microsoft@beatrax.local` | 204px | 72px | 236px |
+| `mailings@hema.nl` | 110px | 60px | 198px |
+
+72px renders as `demo-1+...` — **the same eight characters for both accounts**,
+with a **Disconnect** button beside each and nothing else on the row to tell
+them apart. In Slovenian the column is 0px and the address is not drawn at all.
+
+This is not the fine-pointer artefact #12 is. Emulating the phone — both
+coarse-pointer rules `app.css` applies, the content basis and the 44px touch
+floor — moves the column by 1px, to 71. The 44px floor makes the action column
+wider, so a real handset is at least as bad as the measurement.
+
+Mitigated at one step only: `disconnect` carries a `wire:confirm` that names
+the email, so the wrong account is named before it goes. The list itself still
+does not say which row is which.
+
+### 12. A notification's own text gets 22px of a 232px row (narrow window, mouse)
+
+**G4-R1 surface. 390x844.** Between a `shrink-0` timestamp (88px) and a type
+chip (78px), the `min-w-0 flex-1` column holding the title and body computes to
+**22px** — 41% of the title visible, 42% of the body. The row is `flex-wrap`
+and never wraps: a zero-basis item contributes nothing to the line, so there is
+never an overflow for the wrap to resolve.
+
+`app.css` already carries the remedy, written from this exact surface — *"the
+body of every alert was a 4px column fifty-two lines deep, between a type chip
+and a timestamp that would not shrink"* — and it is inside
+`@media (pointer: coarse)`. A phone is fine; the declaration takes the page from
+nine clipped runs to zero and back when removed. What is not fine is a **narrow
+window with a mouse**, which is reachable: the desktop window opens at 1100
+wide, declares no minimum, and `rememberState()` reopens it wherever it was
+dragged to.
+
 ## Adding a row
 
 Walk it, then add the row in the same pull request as the behaviour. **The

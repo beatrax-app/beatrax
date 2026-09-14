@@ -157,7 +157,11 @@
                         ? 'inbox-error-'.$inbox->inboxId
                         : null;
                 @endphp
-                <li class="flex min-h-16 items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700">
+                {{-- Stacked until there is room for both halves, the way the drift row and the
+                     system alert already are. The actions never shrank, so the address column
+                     took whatever was left: 72px of 358 at 390px wide, which drew two different
+                     inboxes as the same "demo-1+...". --}}
+                <li class="flex min-h-16 flex-col items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                     <div class="min-w-0 flex-1">
                         <p class="truncate text-sm text-slate-900 dark:text-slate-100">{{ $inbox->email }}</p>
                         <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -176,7 +180,7 @@
                             >{{ Lang::get('email-scan::inboxes.error_detail') }}</p>
                         @endif
                     </div>
-                    <div class="flex shrink-0 items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2 sm:shrink-0">
                         @if ($errorTooltipId !== null)
                             <flux:badge color="{{ $badgeColor }}" aria-describedby="{{ $errorTooltipId }}">{{ $badgeLabel }}</flux:badge>
                         @else
@@ -268,7 +272,7 @@
                     @endphp
                     <li
                         wire:key="discovered-{{ $cand->id }}"
-                        class="flex items-center justify-between gap-4 rounded-md border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700"
+                        class="flex flex-col items-start gap-3 rounded-md border border-slate-200 bg-white p-4 dark:bg-slate-950 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
                     >
                         <div class="min-w-0 flex-1">
                             <p class="truncate text-sm text-slate-900 dark:text-slate-100">{{ $cand->senderEmail }}</p>
@@ -276,7 +280,7 @@
                                 {{ $displayName }} · {{ Lang::get('email-scan::inboxes.last_seen') }} {{ $lastSeenHuman }}
                             </p>
                         </div>
-                        <div class="flex shrink-0 items-center gap-2">
+                        <div class="flex flex-wrap items-center gap-2 sm:shrink-0">
                             <span
                                 class="text-xs text-slate-500 dark:text-slate-400"
                                 style="font-variant-numeric: tabular-nums;"
