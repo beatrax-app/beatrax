@@ -194,6 +194,12 @@ the failure cause on `main`, then push a new tag — even a re-pushed tag of the
 name does not re-trigger the workflow reliably because GitHub Actions deduplicates by
 tag SHA, and the SHA changes only with new commits.
 
+Prove the fix before spending a version on it. `release-build.yml` runs the same
+per-platform matrix against an existing tag and uploads the installers as workflow
+artifacts — no smoke test, no signing, no publish, and no release created or touched.
+That is what to iterate a pipeline fix against, so the new tag becomes the step that
+publishes a fix already known to build rather than the step that finds out.
+
 ## Rolling back
 
 There is no "unpublish" path that preserves user trust. A published stable release that
