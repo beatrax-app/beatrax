@@ -130,6 +130,12 @@ final readonly class SealedJsonFile
             // The KEK is 256 random bits rather than a passphrase, so the
             // password-hardening cost buys nothing and made every read ~500ms.
             $this->encryptor->encryptWithKey($tmpPath, $destination, $kek);
+
+            // The encryptor opens its destination at the process umask, so the
+            // sealed file lands 0644 and both finalizers rename that mode onto
+            // the live key-file. Narrowed here because it is the one point the
+            // immediate rename and the deferred finalize both pass through.
+            SecureTempFile::lockDown($destination);
         } finally {
             @unlink($tmpPath);
         }

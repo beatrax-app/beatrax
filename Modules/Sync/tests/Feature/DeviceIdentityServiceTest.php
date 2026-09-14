@@ -108,6 +108,12 @@ it('creates the identity directory at 0700 (not world-traversable)', function ()
     $identityDir = dirname($encPath);
 
     expect(fileperms($identityDir) & 0o777)->toBe(0o700, 'The sync/identity directory must be mode 0700.');
+
+    // The directory is the access gate, but the file carries its own mode
+    // wherever it is copied, and the encryptor writes its destination at the
+    // process umask. RelayConfig cites this key-file as the exemplar of the
+    // 0700-directory-plus-0600-file discipline it follows for bearer secrets.
+    expect(fileperms($encPath) & 0o777)->toBe(0o600, 'The sealed identity key-file must be mode 0600.');
 });
 
 it('it_throws_without_app_lock_kek', function (): void {
