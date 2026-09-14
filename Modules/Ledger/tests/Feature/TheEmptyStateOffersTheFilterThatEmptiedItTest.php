@@ -87,3 +87,43 @@ it('counts no filter for a type the vocabulary does not hold', function (): void
     expect($component->get('filterTypes'))->toBe([])
         ->and($component->call('activeFilterCount')->effects['returns'][0] ?? null)->toBe(0);
 });
+
+it('draws a chip for the counterparty filter, which only the address bar can set', function (): void {
+    $html = Livewire::test(TransactionsList::class)
+        ->set('filterCounterparties', [999_999])
+        ->html();
+
+    expect($html)->toContain('srch-no-results__chips');
+
+    expect(PatternScan::count('/srch-chip--active/', esfChipStrip($html)))
+        ->toBe(1, 'the counterparty filter is in force and the strip offers nothing to remove');
+});
+
+// The shape, not the instance: the counterparty filter was counted and undrawn
+// because nothing asked this of every filter at once. Each is set alone, so a
+// chip drawn for a different filter cannot stand in for the missing one.
+it('draws a chip for every filter it counts, one filter at a time', function (string $property, mixed $value): void {
+    $component = Livewire::test(TransactionsList::class)->set($property, $value);
+
+    $counted = $component->call('activeFilterCount')->effects['returns'][0] ?? 0;
+    expect($counted)->toBe(1, $property.' is not counted as an active filter, so this case proves nothing');
+
+    $html = $component->html();
+
+    // The positive control: without it, a value that fails to empty the list
+    // draws no panel, and "no chips" would read as this rule's own failure.
+    expect(str_contains($html, 'srch-no-results__chips'))->toBeTrue(
+        $property.' left rows on the page, so this case never reached the empty state it is about',
+    );
+
+    expect(PatternScan::count('/srch-chip--active/', esfChipStrip($html)))
+        ->toBeGreaterThan(0, $property.' narrows the list and the strip draws nothing the reader can remove');
+})->with([
+    'accounts' => ['filterAccounts', [999_999]],
+    'categories' => ['filterCategories', [999_999]],
+    'uncategorized' => ['filterUncategorized', true],
+    'counterparties' => ['filterCounterparties', [999_999]],
+    'dates' => ['filterAfter', '2026-07-01'],
+    'amount' => ['filterAmountMin', '999999'],
+    'types' => ['filterTypes', ['refund']],
+]);

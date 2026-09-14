@@ -12,7 +12,7 @@
     - $searchQuery (string) — the current query
     - $isSearchMode (bool)
     - $filterAfter, $filterBefore, $filterAccounts, $filterCategories, $filterUncategorized,
-      $filterAmountMin, $filterAmountMax, $filterAmountDir, $filterTypes
+      $filterCounterparties, $filterAmountMin, $filterAmountMax, $filterAmountDir, $filterTypes
 
     Every filter $activeFilterCount counts draws a chip here. One that does not
     leaves the prompt above asking for a control the reader cannot see: ticking
@@ -78,6 +78,28 @@
                         wire:click="$set('filterUncategorized', false)"
                         class="srch-chip-close"
                         aria-label="{{ Lang::get('ledger::list.filter.remove_category_aria') }}"
+                    >&times;</button>
+                </span>
+            @endif
+
+            {{-- One chip for the whole set, named rather than listed. `counterparty`
+                 arrives only in the URL — no control here builds it a piece at a
+                 time — and counterparties.display_name is sealed at rest, so
+                 printing the names would need the codec and the session key in a
+                 class that reads no sealed column today. The word is the table
+                 header's own: `filter` has no counterparty line, and one word for
+                 one noun beats opening a second register for it in 26 locales. --}}
+            @if (($filterCounterparties ?? []) !== [])
+                @php
+                    $counterpartyWord = Lang::get('ledger::list.table.counterparty');
+                @endphp
+                <span class="srch-chip srch-chip--active">
+                    {{ $counterpartyWord }}
+                    <button
+                        type="button"
+                        wire:click="$set('filterCounterparties', [])"
+                        class="srch-chip-close"
+                        aria-label="{{ Lang::get('ledger::list.filter.remove_named_aria', ['name' => $counterpartyWord]) }}"
                     >&times;</button>
                 </span>
             @endif
