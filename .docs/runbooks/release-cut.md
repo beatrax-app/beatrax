@@ -26,6 +26,19 @@ the version policy and channel semantics, see
    policy behind that; see
    [`70-operations/releasing.md`](https://github.com/beatrax-app/spec/blob/main/70-operations/releasing.md).
 4. Give any breaking change its prominence, below.
+5. Run **release-preflight** against the version you picked — the Actions tab, "Run
+   workflow", the version without its leading `v`. It is the pre-tag checklist run as
+   a check rather than remembered, and it asks three things this page cannot: that the
+   spec marks the version `releasable`, that the tag does not already exist, and that
+   the ruleset's required checks still name jobs that actually run
+   ([OPS-R18](https://github.com/beatrax-app/spec/blob/main/70-operations/README.md) —
+   a renamed job stops being required without anything going red to say so). It
+   deliberately does not push the tag: a bot-pushed tag would be unsigned, and one
+   pushed with the default token would not trigger the build at all.
+
+   Skipping it does not skip the question. The release workflow's spec gate asks the
+   same one the moment the tag lands, and a tag is never moved — so the answer arrives
+   when the only remedy left is a new version number.
 
 ## A breaking change
 
@@ -76,13 +89,19 @@ git-cliff --unreleased --strip header
 
 ```sh
 # Stable release on the stable channel — produces a DRAFT GitHub Release
-git tag v1.4.0
+git tag -s v1.4.0 -m 'Beatrax v1.4.0'
 git push origin v1.4.0
 
 # Release candidate on the preview channel — published immediately as a prerelease
-git tag v1.4.0-rc.1
+git tag -s v1.4.0-rc.1 -m 'Beatrax v1.4.0-rc.1'
 git push origin v1.4.0-rc.1
 ```
+
+Signed, and with a message, because the bare `git tag v1.4.0` this page used to show
+does not produce an unsigned tag — it produces no tag at all. `tag.gpgsign` is on for
+this repository, so that form stops with `fatal: no tag message?`, at the one point in
+the process where a command that does not work costs the most. The signed form above is
+the one release-preflight prints when it passes.
 
 The tag itself is the trigger — `push: tags: ['v*']` and nothing else. There is no
 `workflow_dispatch` button, no second-step "start build" action. As soon as the push
