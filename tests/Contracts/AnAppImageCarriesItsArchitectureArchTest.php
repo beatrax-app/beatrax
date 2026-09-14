@@ -13,6 +13,10 @@ declare(strict_types=1);
 // The config is generated and gitignored, so what is pinned here is the patch
 // being on the prebuild chain that rewrites it, and the two places that would
 // go back to reading an AppImage without knowing which one it is.
+//
+// The name itself is the second trap and cost its own release run: ${arch}
+// renders as `x64` for a dmg and `x86_64` for an AppImage, so the obvious
+// spelling matches no file.
 // @link ../../scripts/nativephp_disambiguate_appimage_by_arch.php
 
 const ARCH_PATCH = 'scripts/nativephp_disambiguate_appimage_by_arch.php';
@@ -67,6 +71,10 @@ it('never reads an AppImage without saying which architecture it wants', functio
     // two on disk it picks whichever the filesystem returns first.
     expect(str_contains($job, "-name '*.AppImage'"))->toBeFalse('build-linux finds an AppImage by a glob that matches both architectures, so it reads whichever one `find` returns first — the defect that shipped an arm64 image to x64 desktops.');
     expect(str_contains($job, '-name "*.AppImage"'))->toBeFalse('build-linux finds an AppImage by a glob that matches both architectures, so it reads whichever one `find` returns first.');
-    expect(str_contains($job, '*-x64.AppImage'))->toBeTrue('Nothing in build-linux names the x64 AppImage, so the leg that must run on an x86_64 runner no longer says which image it means.');
+    // `x86_64`, not `x64`. electron-builder renders the same ${arch} macro as
+    // `x64` for a dmg and `x86_64` for an AppImage, so the spelling that works
+    // everywhere else matches no file here. It cost a release run to learn.
+    expect(str_contains($job, '*-x86_64.AppImage'))->toBeTrue('Nothing in build-linux names the x86_64 AppImage, so the leg that must run on an x86_64 runner no longer says which image it means.');
+    expect(str_contains($job, '-x64.AppImage'))->toBeFalse('build-linux looks for an AppImage named `-x64`, which electron-builder never writes: it spells that architecture `x86_64` in an AppImage name. The glob matches nothing and the build fails on a missing artefact.');
     expect(str_contains($job, '*-arm64.AppImage'))->toBeTrue('Nothing in build-linux names the arm64 AppImage, so an architecture can go missing from a release without the shape check noticing.');
 });
