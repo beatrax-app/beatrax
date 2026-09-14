@@ -1,0 +1,13 @@
+# Hosts the link checker cannot reach, with the reason each one is here.
+# Not a place to silence a broken link: M6 is about links naming a file, and
+# every one of those still resolves or fails the build. This file is only for
+# a URL that is correct for a reader and refused to an automated client.
+#
+# opensource.org serves 403 Forbidden to non-interactive clients across the
+# whole domain -- measured 2026-09-14, three consecutive requests to
+# /licenses and to the bare root, under both a bot and a browser user-agent.
+# It is reachable in a real browser, so the citation in NOTICE.md is sound;
+# there is no alternative path to swap to, because the host itself refuses.
+# The shared workflow already accepts 200,206,429 with five retries, so this
+# is not a slow host having a bad minute -- it is a permanent refusal.
+https://opensource\.org/.*
