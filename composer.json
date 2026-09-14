@@ -179,6 +179,8 @@
         "analyse:deps": "composer-require-checker check --config-file=composer-require-checker.json composer.json",
         "format": "pint",
         "format:check": "pint --test",
+        "format:md": "npx --yes markdownlint-cli2@0.23.1 --fix \"**/*.md\"",
+        "format:md:check": "npx --yes markdownlint-cli2@0.23.1 \"**/*.md\"",
         "dev:seed": [
             "@php artisan migrate --force",
             "@php artisan demo:seed --reset"

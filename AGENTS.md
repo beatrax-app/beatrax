@@ -177,8 +177,14 @@ Two things are shared between worktrees and will bite you:
 
 ## Before you open a PR
 
-- All four gate checks pass locally (`composer format:check && composer analyse
-  && composer analyse:deps && composer test`).
+- All five gate checks pass locally (`composer format:check && composer analyse
+  && composer analyse:deps && composer test && composer format:md:check`).
+  The last one is the `hygiene / markdown` job, which lives in the spec repo's
+  reusable workflow rather than in `.github/workflows/` here — so it is easy to
+  miss until it reds a pull request. It reads this repo's own
+  `.markdownlint-cli2.jsonc`, and the pin — `markdownlint-cli2@0.23.1`,
+  markdownlint 0.41.1 — is the pair the action runs, read off a CI log rather
+  than guessed. `composer format:md` fixes what is fixable.
 - Your change cites a spec identifier in a commit `Spec:` trailer **and** in the
   PR body — the gate reads both. Routine maintenance cites `GOV-R12`.
 - Behaviour change? **The spec PR merged first**
