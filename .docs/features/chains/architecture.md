@@ -147,8 +147,9 @@ What the module explicitly does NOT do:
   difference measured every writer: `chain_links` is a synced table, so the
   applier lands a peer's rows inside the same window, a second pass for the
   same user overlaps this one (`dispatchSync` bypasses the queue's unique
-  lock), and a cascade delete of a transaction takes its links with it, which
-  made the stored figure negative. A `JobFailed` listener registered in
+  lock), and deleting a transaction takes its links with it through
+  `DependentRowCascade`, which made the stored figure negative. A
+  `JobFailed` listener registered in
   `ChainsServiceProvider::boot()` flips it to `failed` with a
   truncated `last_error` on final-retry exhaustion.
 - `CardStatementUpserter` (impl. `UpsertsCardStatements`) — promotes

@@ -280,8 +280,8 @@ in a `finally` — a failed attempt must never advance the freshness signal a
 user reads as "how current is my data." Every attempt (success or failure)
 writes `last_attempt_at`/`last_attempt_status` independently, so a
 silently-failing scheduled sync stays visible. Every write is scoped to the
-connection's `user_id` as well as its id: the owner can be cleared by a
-cascading delete while a fetch is in flight, and a timestamp then describes
+connection's `user_id` as well as its id: the owner can be cleared by an
+account purge while a fetch is in flight, and a timestamp then describes
 an attempt made for somebody who is gone.
 
 The freshness signal is **not** the fetch cursor. `fetched_through_at` is,

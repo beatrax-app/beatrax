@@ -167,8 +167,9 @@ values:
   `open`/`partially_settled` statement on the same account, so the
   credit lands where the money actually reduces what the user owes.
 
-`from_statement_id` cascades on delete — a credit that lost its source
-statement has no meaning. `to_statement_id` is nullable and
+`from_statement_id` is `NO ACTION`, and `DependentRowCascade` takes the
+credit with the statement — a credit that lost its source statement has
+no meaning. `to_statement_id` is nullable and
 `nullOnDelete`, because a surplus can exist before the next statement
 period rolls in.
 

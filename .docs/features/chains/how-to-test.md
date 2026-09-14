@@ -131,8 +131,8 @@ composer test
   drawer queries via `ChainLinkQuery::forTransaction`, which
   returns a `ChainTree` built by `ChainTreeWalker::walk`. Check the
   underlying SQL with `DB::enableQueryLog()` in a test harness; the
-  most common cause is the FK `to_transaction_id` was nulled out by a
-  cascade delete that left the from-side intact.
+  most common cause is the transaction `to_transaction_id` named was
+  deleted, taking the link but leaving the from-side intact.
 - **Auto-promotion learning loop didn't fire after three
   confirmations** — count the confirmed rows sharing the signature
   hash; a common cause is the evidence JSON's keys are ordered
@@ -243,9 +243,10 @@ and the assertion — see
   with no `completed_at`. The import results page's `wire:poll`
   surfaces the orphan with an "in progress" message; a manual retry
   re-dispatches.
-- **A candidate's `to_transaction_id` has been deleted** — the FK is
-  `cascadeOnDelete`, so the `chain_link` is dropped along with the
-  transaction. The user never sees a dangling link.
+- **A candidate's `to_transaction_id` has been deleted** —
+  `DependentRowCascade` drops the `chain_link` along with the
+  transaction; the key itself is `NO ACTION` and would refuse the delete
+  rather than clear it. The user never sees a dangling link.
 - **`whereJsonContains('evidence->signature_hash', $hash)`** — the
   underlying SQLite JSON1 contract is exercised by
   `ChainLinksJsonContainsSmokeTest`. If a future SQLite build

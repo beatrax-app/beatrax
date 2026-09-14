@@ -222,8 +222,9 @@ Modules/Counterparties/
 Migrations:
 
 - `2026_05_27_020001_create_counterparties_table.php` — initial create.
-  Columns: `id`, `user_id` (FK with cascade delete from user side
-  only), `type`, `slug` (128), `display_name`, `iban` (64, nullable),
+  Columns: `id`, `user_id` (the migration declares `cascadeOnDelete`;
+  stripped to `NO ACTION` tree-wide since), `type`, `slug` (128),
+  `display_name`, `iban` (64, nullable),
   `merchant_name` (nullable), `metadata` (JSON, nullable), timestamps.
   UNIQUE `(user_id, slug)` powers the per-user slug-collision suffix
   walk. Index `(user_id, type)` powers the index page's per-type

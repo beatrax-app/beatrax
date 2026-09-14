@@ -176,9 +176,9 @@ and the assertion — see
   answering "not yours" with a 404 and "nobody's" with a rendered page is an
   existence oracle over the id space, so both soft-reset to the reader's own
   view. See [url-parameters.md](url-parameters.md#one-answer-for-both-cases).
-- **`forecast_scenarios.user_id` is non-nullable + cascade-on-
-  delete.** A NULL `user_id` cannot land; deleting the user wipes
-  the scenarios cleanly.
+- **`forecast_scenarios.user_id` is non-nullable.** A NULL `user_id`
+  cannot land; the key is `NO ACTION`, so `UserScopedDataPurge`
+  discovers the column and wipes the scenarios when the account goes.
 - **The projection is deterministic against the input set.**
   Same inputs (scenario, recurring set, anchor, horizon, **and the
   `exchange_rates` rows the fold prices against**) produce the same

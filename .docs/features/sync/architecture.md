@@ -2675,6 +2675,13 @@ Two tests hold the line: every foreign key must be classified as owning or not
 owning, and no foreign key may declare a cascade
 (`Modules/Sync/tests/Feature/EveryForeignKeySaysWhoOwnsTheRowTest.php`).
 
+Nothing holds the line in prose, and eleven feature pages were still describing
+the database cascade that had been removed under them — naming keys that cascade
+where the schema says `NO ACTION`, and one that named a foreign key the table
+does not have. A page describing a delete path names `DependentRowCascade`; a
+page stating a key's `ON DELETE` behaviour is making a claim about the schema,
+and the schema is where it should be read from.
+
 Both of those read the schema the migrations build, which is not the same claim
 as "no installed database still cascades". One was found that did — 23 tables,
 42 keys, with the removal migration recorded as run in its own `migrations`
