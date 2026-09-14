@@ -49,6 +49,14 @@ final readonly class SetTransactionNote implements SetsTransactionNote
             : null;
         $trimmed = $text === null ? '' : trim($text);
 
+        // '' out of a non-empty stored value is the codec blanking ciphertext
+        // no epoch here opened. Appending to that writes the addition alone and
+        // re-seals it over the note it was added to, which is the one mode
+        // whose whole meaning is that what is already there stays.
+        if ($mode === NoteMode::Append->value && is_string($row->note) && $row->note !== '' && $currentNote === '') {
+            return 0;
+        }
+
         if ($mode === NoteMode::Append->value) {
             $target = self::appended($currentNote, $trimmed);
         } else {
