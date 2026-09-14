@@ -4,19 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Contracts\Support;
 
+use RuntimeException;
+
 /**
  * @link ../../../.docs/conventions/analyser-rules-enforced-locally.md#the-scope-every-guard-reads
  */
 final class SonarSourceFiles
 {
-    /**
-     * `sonar.sources` in sonar-project.properties, and nothing else. A guard
-     * reading a wider tree than the hosted analysis fails on files the
-     * dashboard will never mention.
-     *
-     * @var list<string>
-     */
-    private const ROOTS = ['Modules', 'config', 'routes', 'database'];
+    private const string SOURCES = 'sonar.sources';
 
     /**
      * The half of `sonar.exclusions` a `.php` walk over ROOTS can reach, plus
@@ -47,12 +42,16 @@ final class SonarSourceFiles
         '/Resources/lang/',
     ];
 
+    // `sonar.sources`, read from the file rather than copied out of it. A guard
+    // reading a WIDER tree than the hosted analysis fails on files the dashboard
+    // will never mention; one reading a NARROWER tree goes green on files it
+    // does. This list was narrower — see roots() for what that cost.
     /** @return list<string> */
     public static function all(): array
     {
         $files = [];
 
-        foreach (self::ROOTS as $root) {
+        foreach (self::roots() as $root) {
             $path = base_path($root);
 
             if (is_dir($path)) {
@@ -63,6 +62,35 @@ final class SonarSourceFiles
         sort($files);
 
         return $files;
+    }
+
+    // Transcribing it was the bug: `sonar.sources` grew `tools/PhpStan` and this
+    // list did not, so the fourteen guards standing in for the dashboard were
+    // blind to a directory it scans — S1142 landed there and every one of them
+    // stayed green. Derived, the two cannot disagree again.
+    /** @return list<string> */
+    private static function roots(): array
+    {
+        $path = base_path('sonar-project.properties');
+
+        if (! is_file($path)) {
+            throw new RuntimeException($path.' is missing, so the scope these guards read cannot be taken from the file they must agree with.');
+        }
+
+        foreach (explode("\n", (string) file_get_contents($path)) as $line) {
+            if (! str_starts_with(trim($line), self::SOURCES.'=')) {
+                continue;
+            }
+
+            $declared = explode(',', substr(trim($line), strlen(self::SOURCES) + 1));
+            $roots = array_values(array_filter(array_map(trim(...), $declared), static fn (string $root): bool => $root !== ''));
+
+            if ($roots !== []) {
+                return $roots;
+            }
+        }
+
+        throw new RuntimeException('sonar-project.properties declares no non-empty '.self::SOURCES.'=, so these guards would read an empty tree and report it as clean.');
     }
 
     /** @return list<string> */
