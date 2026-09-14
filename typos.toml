@@ -21,8 +21,10 @@
 
 # Hotkey mockup notation like [e]rror, [s]earch in keyboard-shortcut examples,
 # and SQL verbs written with a capitalised keyword plus an English suffix —
-# the tokeniser splits "JOINed" into "JOI" + "Ned" and flags the tail.
-extend-ignore-re = ["\\[[a-z]\\][a-zA-Z]+", "JOINed"]
+# the tokeniser splits "JOINed" into "JOI" + "Ned" and flags the tail. "ANDed"
+# splits into "AN" + "Ded" and "NULLable" into "NUL" + "Lable", both of which
+# only became visible once `.docs/` started being read at all.
+extend-ignore-re = ["\\[[a-z]\\][a-zA-Z]+", "JOINed", "ANDed", "NULLable"]
 
 [default.extend-words]
 beatrax = "beatrax"
@@ -107,6 +109,9 @@ Schme = "Schme"
 UNIQU = "UNIQU"
 
 # Words the dictionary lacks that are correct in this codebase.
+# An index is "seeked" rather than scanned -- the verb the query planner's own
+# vocabulary uses, and "sought" would say something else.
+seeked = "seeked"
 unparseable = "unparseable"
 Unparseable = "Unparseable"
 invokable = "invokable"
@@ -153,7 +158,32 @@ Japanse = "Japanse"              # nl: "Japanese", in a currency name
 Extracto = "Extracto"            # es: "statement"
 klick = "klick"                  # de/sv: "click", in the touch-copy guard
 
+# The same, from the pages in `.docs/` that document the localisation work and
+# quote the copy they are about. Visible only since `ignore-hidden` was turned
+# off above.
+ist = "ist"              # de: "is", in "Die Queue ist leer"
+Openen = "Openen"        # nl: "to open", the verb the reports index uses
+alle = "alle"            # nl: "all", in "Voldoe aan alle"
+Alle = "Alle"            # nl: "All", in "Alle apparaten zijn up-to-date"
+preferenser = "preferenser"  # sv: "preferences"
+Ein = "Ein"              # de: "a", in a receipt-conflict sentence
+Feld = "Feld"            # de: "field", in the same sentence
+zlot = "zlot"            # sl: the zloty, in "poljski novi zlot"
+
 [files]
+# `.docs/` is a dot-directory, and the walker skips those by default -- so the
+# 242 pages this repository keeps its technical record in were never read by
+# this gate, in CI or anywhere else. Measured when it was turned on: seventeen
+# hits, and not one of them was a misspelling. Two were the tokeniser splitting
+# "ANDed" and "NULLable" the way it splits "JOINed"; the rest were foreign
+# words quoted on purpose. The gate had been silent because it was looking at
+# nothing, which reads exactly like a clean tree.
+#
+# Set here rather than passed as `--hidden`, so the shared hygiene workflow --
+# which runs this binary with no arguments at all -- picks it up too. A flag
+# would have covered the machine that remembered to type it and nothing else.
+ignore-hidden = false
+
 # Vendored, generated, and fixture trees are not ours to spell-check. Bank
 # statement fixtures and the merchant corpus carry real-world strings in a
 # dozen languages, deliberately unedited — correcting them would break the
@@ -170,6 +200,10 @@ extend-exclude = [
   "*.min.js",
   "*.min.css",
   "**/tests/fixtures/",
+  # Pest's generated snapshots, another dot-directory the walker now reaches.
+  # They are recorded output, and the merchant names in a redacted statement
+  # fixture are spelled the way the statement spelled them.
+  "tests/.pest/snapshots/",
   "resources/corpus/",
   # gitleaks' own default ruleset, vendored byte-identical at the version the
   # shared security workflow downloads. Its `generic-api-key` stopword list is
