@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Contracts\Support;
 
+use Modules\Core\Public\Support\PatternScan;
+
 /**
  * Relative imports in the JavaScript a Composer package ships pre-compiled.
  *
@@ -22,15 +24,21 @@ final class ShippedElectronImports
      */
     public static function scan(string $file, string $source): array
     {
-        preg_match_all(
+        // PatternScan rather than preg_match_all: the engine giving up answers
+        // false, which in this position is indistinguishable from a module that
+        // imports nothing — and a dist nobody read is exactly what this rule
+        // exists to refuse.
+        $matches = PatternScan::all(
             '/(?:from|import)\s*\(?\s*[\'"](\.[^\'"]*)[\'"]/',
             $source,
-            $matches,
         );
+
+        /** @var list<string> $specifiers */
+        $specifiers = $matches[1];
 
         $unresolved = [];
 
-        foreach ($matches[1] as $specifier) {
+        foreach ($specifiers as $specifier) {
             if (self::resolves(dirname($file).'/'.$specifier)) {
                 continue;
             }
@@ -38,7 +46,7 @@ final class ShippedElectronImports
             $unresolved[] = $specifier;
         }
 
-        return ['specifiers' => count($matches[1]), 'unresolved' => $unresolved];
+        return ['specifiers' => count($specifiers), 'unresolved' => $unresolved];
     }
 
     // The three shapes a bundler tries, in the order it tries them. An
