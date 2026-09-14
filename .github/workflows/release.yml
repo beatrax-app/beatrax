@@ -815,6 +815,24 @@ jobs:
                       cat "$emitted"
                   done
 
+            # REPO-R29 asks that each bundle be smoke-tested — launched and
+            # asked for its health endpoint — before upload. The checks above
+            # prove the AppImage is SHAPED right; only launching proves it runs.
+            # xvfb supplies the display Electron needs, and the AppImage is
+            # extracted rather than FUSE-mounted, which a hosted runner cannot do.
+            - name: Launch the AppImage and ask it for /health
+              env:
+                  REF_NAME: ${{ github.ref_name }}
+              run: |
+                  set -euo pipefail
+                  sudo apt-get update -qq
+                  sudo apt-get install -y -qq xvfb
+                  APPIMAGE=$(find nativephp/electron/dist -maxdepth 1 -name '*.AppImage' -print -quit)
+                  [ -n "$APPIMAGE" ] || { echo "::error::no AppImage to smoke-test."; exit 1; }
+                  chmod +x "$APPIMAGE"
+                  scripts/desktop_smoke.sh "${REF_NAME#v}" \
+                      xvfb-run -a "$APPIMAGE" --appimage-extract-and-run --no-sandbox
+
             - name: Upload Linux artifacts
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
               with:
@@ -1082,11 +1100,12 @@ jobs:
 
     smoke-server:
         # The shipped self-host recipe, launched and asked for its health
-        # endpoint before anything is uploaded. The four desktop and mobile
-        # legs above cannot be launched this way on a hosted runner — an
-        # Electron bundle needs a session and a display, and the Android APK
-        # needs a device — so this covers the one shape CI can actually run,
-        # which is also the shape that shipped answering 404 to everything.
+        # endpoint before anything is uploaded — the shape that once shipped
+        # answering 404 to everything. This used to say the four legs above
+        # cannot be launched on a hosted runner. That holds for Android, which
+        # needs a device; it was wrong about Electron, where xvfb supplies the
+        # display — build-linux now launches its AppImage and asks it the same
+        # question. macOS and Windows are owed the same step.
         name: smoke (self-host server)
         needs: [gate, spec-gate]
         uses: ./.github/workflows/deploy-smoke.yml
