@@ -177,14 +177,23 @@ Two things are shared between worktrees and will bite you:
 
 ## Before you open a PR
 
-- All five gate checks pass locally (`composer format:check && composer analyse
-  && composer analyse:deps && composer test && composer format:md:check`).
-  The last one is the `hygiene / markdown` job, which lives in the spec repo's
-  reusable workflow rather than in `.github/workflows/` here — so it is easy to
-  miss until it reds a pull request. It reads this repo's own
-  `.markdownlint-cli2.jsonc`, and the pin — `markdownlint-cli2@0.23.1`,
-  markdownlint 0.41.1 — is the pair the action runs, read off a CI log rather
-  than guessed. `composer format:md` fixes what is fixable.
+- All six gate checks pass locally (`composer format:check && composer analyse
+  && composer analyse:deps && composer test && composer format:md:check &&
+  composer typos`).
+- The last two are the `hygiene` jobs, and they are the ones worth naming here:
+  that workflow lives in the spec repo rather than in `.github/workflows/`, so
+  there is nothing local to read and both are first met as a red pull request.
+  - `composer format:md:check` is `hygiene / markdown`. It reads this repo's own
+    `.markdownlint-cli2.jsonc`, and the pin — `markdownlint-cli2@0.23.1`,
+    markdownlint 0.41.1 — is the pair the action runs, read off a CI log rather
+    than guessed. `composer format:md` fixes what is fixable.
+  - `composer typos` is `hygiene / typos`. It reads this repo's own
+    `typos.toml`, which carries the words this codebase spells its own way.
+    Needs `brew install typos-cli`; the script says so when it is missing
+    rather than passing silently, because a spell-check that ran over nothing
+    reports exactly what a clean tree does. A word in a shipped locale that a
+    test or a comment quotes goes in `[default.extend-words]` with the language
+    and the meaning beside it, the way `iz`, `cours` and `Leeg` already are.
 - Your change cites a spec identifier in a commit `Spec:` trailer **and** in the
   PR body — the gate reads both. Routine maintenance cites `GOV-R12`.
 - Behaviour change? **The spec PR merged first**
