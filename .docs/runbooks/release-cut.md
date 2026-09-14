@@ -176,12 +176,14 @@ repo write, but no end user can see or download the release. To promote:
 3. Confirm the asset list. `beatrax-<version>-checksums.txt` covers every other asset
    on the page and has its own `.sig`, so the fastest read is that file: the `verify
    published` job already failed the run if anything published is missing from it. Then
-   check that each of `latest.yml`, `latest-mac.yml` and `latest-linux.yml` is present
-   with a `.sig` sibling, and that the installer each one names in its `path:` field is
-   on the page too. A stable page carries `beta.yml`, `beta-mac.yml` and `beta-linux.yml`
-   beside them: the build that is newest on stable is newest on preview as well, so the
+   check that each of `latest.yml`, `latest-mac.yml`, `latest-linux.yml` and
+   `latest-linux-arm64.yml` is present with a `.sig` sibling, and that the installer each
+   one names in its `path:` field is on the page too. Linux has two because it ships an
+   AppImage per architecture and electron-updater resolves `latest-linux.yml` on x64 and
+   `latest-linux-arm64.yml` elsewhere. A stable page carries `beta.yml`, `beta-mac.yml`,
+   `beta-linux.yml` and `beta-linux-arm64.yml` beside them: the build that is newest on stable is newest on preview as well, so the
    preview set is written for every tag shape and only the `latest` set is withheld from
-   a prerelease. The Windows `.exe`, the macOS `.dmg`, the Linux `.AppImage` and the
+   a prerelease. The Windows `.exe`, the macOS `.dmg`, both Linux `.AppImage` files and the
    Android `.apk` are the artifacts the four build jobs upload; `.msi` and `.deb` appear
    when `electron-builder` produced them.
 4. Click Publish release.

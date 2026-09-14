@@ -278,6 +278,12 @@ return [
         // `#plugin/*` subpath imports abort the Vite/Rollup build.
         'php scripts/nativephp_patch_electron_imports.php',
 
+        // The AppImage target is the one artifactName NativePHP leaves without
+        // an ${arch}, while build:linux builds x64 AND arm64 -- so arm64
+        // overwrote x64 and the only image a release carried could not exec on
+        // the architecture its manifest advertised it to.
+        'php scripts/nativephp_disambiguate_appimage_by_arch.php',
+
         // Replaces NativePHP's MenuBar facade, whose tray items bind to the
         // focused BrowserWindow: after the window is closed nothing is
         // focused and the tray's open item silently did nothing.

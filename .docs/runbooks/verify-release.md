@@ -18,7 +18,8 @@ Two kinds of hashed document, both signed with the same publisher key:
 | `beatrax-<version>-checksums.txt` | SHA-256 of **every** other asset on the page, one per line, in `shasum -c` format |
 | `latest-mac.yml` | Version, size and SHA-512 of the macOS `.dmg` |
 | `latest.yml` | The same for the Windows `.exe` |
-| `latest-linux.yml` | The same for the Linux `.AppImage` |
+| `latest-linux.yml` | The same for the x64 Linux `.AppImage` |
+| `latest-linux-arm64.yml` | The same for the arm64 Linux `.AppImage` |
 | `<document>.sig` | The Ed25519 detached signature over that document, hex-encoded |
 | the installers | Whatever each platform job produced, plus the sideloadable Android `.apk` |
 
