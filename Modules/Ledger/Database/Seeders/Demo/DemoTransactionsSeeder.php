@@ -878,7 +878,12 @@ final class DemoTransactionsSeeder
             ? $ref->tagged($user->id, $account->id, $rowIndex)
             : DemoTransactionRef::plain($user->id, $account->id, $rowIndex);
 
-        if ($this->alreadySeeded($user, $sourceRef)) {
+        $seeded = Transaction::query()
+            ->where('user_id', $user->id)
+            ->where('source_ref', $sourceRef)
+            ->exists();
+
+        if ($seeded) {
             return 0;
         }
 
@@ -925,13 +930,5 @@ final class DemoTransactionsSeeder
         $attrs = $this->codec->encryptAttrs('transactions', $attrs, $user->id, ($this->session)());
 
         return Transaction::query()->insertOrIgnore($attrs);
-    }
-
-    private function alreadySeeded(User $user, string $sourceRef): bool
-    {
-        return Transaction::query()
-            ->where('user_id', $user->id)
-            ->where('source_ref', $sourceRef)
-            ->exists();
     }
 }
