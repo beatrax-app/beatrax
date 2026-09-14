@@ -202,9 +202,10 @@ a different rule.
 
 `DeleteCategorizationRule` runs its lookup-then-delete inside a DB
 transaction so the pair is atomic (no TOCTOU race with a concurrent
-cascade); the category_id FK cascades on category delete, but deleting
-a rule never retroactively un-categorises the transactions it
-previously matched.
+cascade). `categorization_rules` carries no `category_id` foreign key at
+all — a deleted category is handled by `DeactivateRulesOnReferentDelete`
+below — and deleting a rule never retroactively un-categorises the
+transactions it previously matched.
 
 All three actions look the parent row up via
 `where('id', ...)->where('user_id', ...)` and raise

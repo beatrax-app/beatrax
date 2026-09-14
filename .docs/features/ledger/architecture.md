@@ -543,8 +543,8 @@ its leg rows, its search-index shadow and the retype of a transfer's
 surviving partner are one `DB::transaction`, and every event is dispatched
 only after it commits: the parent's `delete` tombstone, one
 `TransactionSplitMutated` delete tombstone per leg (read before the delete,
-since the DB FK cascade removes the leg rows locally — sync convergence must
-not rely on the peer's replay connection having FK cascade active), and an
+since `DependentRowCascade` removes the leg rows locally — no foreign key
+cascades any more, so nothing clears them behind the writer's back), and an
 `edit` for the survivor when one was retyped. Each deletion is an explicit,
 first-class op in the log.
 

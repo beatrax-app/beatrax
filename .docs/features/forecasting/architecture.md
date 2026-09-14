@@ -798,8 +798,8 @@ affected scenario (one `ProjectForecastJob` per `ForecastHorizon` case for
 the baseline, and one more per case for the affected scenario), because a
 scenario mutation does not change what any OTHER saved scenario should
 show. For `ScenarioDeleted` only the baseline horizons
-dispatch — the deleted scenario's runs were already wiped by the
-cascade-on-delete FK. `ProjectForecastOnRecurringChange`/
+dispatch — the deleted scenario's runs were already wiped by
+`DependentRowCascade`. `ProjectForecastOnRecurringChange`/
 `ProjectForecastOnDriftDismissed` import only `Modules\Recurring\Public\Events`
 / `Modules\DriftAlerts\Public\Events` — never the sibling `Internal`
 namespace — enforced by `crossModuleAccessGoesThroughPublic`.

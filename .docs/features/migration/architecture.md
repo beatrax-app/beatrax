@@ -62,9 +62,11 @@ identically to data imported any other way.
    resolves the matching `ParsesMigrationSource` implementation, parses the
    already-extracted export directory into a `MigrationBatch`, and hands it to
    `StagingWriter`. No domain table is touched — staging IS the preview state.
-   Any throw during parse-or-stage deletes the just-created run row; every
-   `migration_staging_*` FK cascades off `migration_run_id`, so a partial
-   failure leaves nothing behind.
+   Any throw during parse-or-stage deletes the just-created run row, and
+   `discardPartialRun` clears the staging rows through `DependentRowCascade`
+   first: every `migration_staging_*` FK is `NO ACTION`, so the parent delete
+   would otherwise be refused and that foreign-key error would take the place
+   of the parse failure that caused it.
 2. **`StagingWriter`** lands the batch's bounded collections (categories,
    accounts, payees, budget assignments, goals, already-known-unmapped items)
    directly, and streams the batch's lazy `Generator<MigrationTransactionDto>`
