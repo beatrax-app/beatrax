@@ -99,7 +99,7 @@ runs:
                   printf '%s\n' "$line" >> .env
               done <<< "$EXTRA"
 
-              if [ -n "$APP_VERSION" ]; then
+              if [ -n "${APP_VERSION:-}" ]; then
                   printf 'NATIVEPHP_APP_VERSION=%s\n' "${APP_VERSION#v}" >> .env
               fi
 
@@ -117,7 +117,7 @@ runs:
               # ships without this boots, runs, and tells every reader it is
               # `0.0.0-dev`. Nothing downstream fails, which is why it survived
               # to a release.
-              if [ -n "$APP_VERSION" ] && ! grep -qE '^NATIVEPHP_APP_VERSION=.+$' .env; then
+              if [ -n "${APP_VERSION:-}" ] && ! grep -qE '^NATIVEPHP_APP_VERSION=.+$' .env; then
                   echo "::error::stage-shipped-env: the staged .env carries no NATIVEPHP_APP_VERSION, so this bundle would report itself as a development build."
                   exit 1
               fi

@@ -76,3 +76,76 @@ it('reads the version from somewhere the shipped bundle actually has', function 
 
     expect($usesGetenv && $disabled)->toBeFalse('The health snapshot reads NATIVEPHP_APP_VERSION with getenv() while putenv is disabled, so it can never see a value that came from the shipped .env and will always answer `dev`.');
 });
+
+// The composite action is one bash script under a `run:` key. Lifted by
+// indentation, the same way the staging rule beside this one reads it, because
+// the suite has no YAML reader.
+function shippedVersionScript(string $action): string
+{
+    $lines = explode("\n", $action);
+    $body = [];
+    $indent = null;
+
+    foreach ($lines as $number => $line) {
+        if ($indent === null) {
+            if (PatternScan::matches('/^\s+run: \|\s*$/', $line)) {
+                $indent = strspn((string) ($lines[$number + 1] ?? ''), ' ');
+            }
+
+            continue;
+        }
+
+        if (trim($line) !== '' && strspn($line, ' ') < $indent) {
+            break;
+        }
+
+        $body[] = substr($line, $indent);
+    }
+
+    return implode("\n", $body);
+}
+
+/** Runs it the way a bundling job would, and answers what that job would have got. */
+function shippedVersionRun(string $script, string $directory, string $appVersion): int
+{
+    $path = $directory.'/run.sh';
+    file_put_contents($path, $script);
+
+    $command = 'cd '.escapeshellarg($directory)
+        .' && EXTRA='.escapeshellarg('')
+        .' APP_VERSION='.escapeshellarg($appVersion)
+        .' bash '.escapeshellarg($path).' 2>&1';
+
+    exec($command, $output, $status);
+
+    return $status;
+}
+
+it('writes the tag into the file a bundle carries, when it is actually run', function (): void {
+    $action = shippedVersionRead(SHIPPED_VERSION_ACTION);
+    $script = shippedVersionScript($action);
+    expect($script)->not->toBe('', 'No script could be lifted out of the staging action, so nothing below ran it.');
+
+    $directory = sys_get_temp_dir().'/shipped-version-'.bin2hex(random_bytes(6));
+    mkdir($directory);
+
+    try {
+        file_put_contents($directory.'/.env.bundled', "APP_ENV=local\nAPP_DEBUG=true\n");
+
+        // The leading `v` belongs to the tag. A bundle reporting `v2.0.0` fails
+        // every comparison against a manifest that says `2.0.0`.
+        expect(shippedVersionRun($script, $directory, 'v9.9.9'))->toBe(0, 'The action exits non-zero when given a version, so this is what a bundling job would have got.');
+        expect((string) file_get_contents($directory.'/.env'))->toContain('NATIVEPHP_APP_VERSION=9.9.9');
+        expect((string) file_get_contents($directory.'/.env'))->not->toContain('NATIVEPHP_APP_VERSION=v9.9.9');
+
+        // A caller that passes nothing still stages: the version is how a
+        // release bundle is told which one it is, not a condition of staging.
+        expect(shippedVersionRun($script, $directory, ''))->toBe(0, 'The action refuses to stage at all when no version is given, which would break every caller that does not build a release.');
+        expect((string) file_get_contents($directory.'/.env'))->not->toContain('NATIVEPHP_APP_VERSION=');
+    } finally {
+        @unlink($directory.'/.env.bundled');
+        @unlink($directory.'/.env');
+        @unlink($directory.'/run.sh');
+        @rmdir($directory);
+    }
+});
