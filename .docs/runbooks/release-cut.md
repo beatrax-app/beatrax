@@ -98,7 +98,7 @@ Follow the run live:
 gh run watch
 ```
 
-Or browse to the Actions tab on GitHub. Four things to confirm during the run:
+Or browse to the Actions tab on GitHub. Five things to confirm during the run:
 
 - The spec gate and the quality gate (a single PHP 8.5 axis) complete green. About
   five minutes.
@@ -106,6 +106,10 @@ Or browse to the Actions tab on GitHub. Four things to confirm during the run:
   to twenty minutes wall-clock once they kick off; they run in parallel. The macOS and
   Windows jobs refuse to build at all when a signing credential is missing, and then
   interrogate the artifact they produced rather than trusting the build's exit code.
+- The `smoke (self-host server)` job launches the shipped self-host recipe and asks it
+  for its health endpoint. It is not a platform build and it runs beside them rather
+  than after them, but `publish` names it in `needs` alongside the four: the shape it
+  covers is the one that shipped answering 404 to everything.
 - The publish job runs, writes a SHA-256 checksum file over every artifact, signs that
   and each auto-update manifest with Ed25519, and uploads every artifact plus the
   detached signatures. About two minutes.
@@ -115,18 +119,27 @@ Or browse to the Actions tab on GitHub. Four things to confirm during the run:
   checksum file. If it fails, the assets on the page are not what the pipeline signed —
   or one of them is something the pipeline never vouched for.
 
-If any platform job fails, the workflow stops and the publish job is skipped. Fix the
-underlying cause on `main`, then either delete and re-push the same tag (acceptable for
-an RC that has not been distributed) or bump to the next patch version (the safe choice
-for a stable tag that has been seen by anyone).
+If any platform job fails, the workflow stops and the publish job is skipped — and so
+it does when the self-host smoke job fails, which is the one cause a green board across
+the four builds does not rule out. Fix the underlying cause on `main`, then either
+delete and re-push the same tag (acceptable for an RC that has not been distributed) or
+bump to the next patch version (the safe choice for a stable tag that has been seen by
+anyone).
 
 ## After the run completes
 
 ### For an RC tag (`v*-rc.*`)
 
-The release is already published as a prerelease. Subscribers on the preview channel
-will receive the update on their next auto-update poll (within four hours). No further
-action is required.
+The release is already published as a prerelease, but the preview channel does not read
+the tagged release. It reads a rolling release that the `move the preview feed` job
+repoints onto this build once `verify published` is green, and that job runs only for a
+tag carrying a prerelease suffix — a hyphen in the tag is the whole test. It fails
+outright when the tag published no `beta*.yml` manifest, because a feed pointed at a
+tag without one answers 404 to every reader on preview.
+
+Confirm it completed. When it did, subscribers receive the update on their next
+auto-update poll (within four hours) and no further action is required. When it did
+not, the release is published and no preview reader is ever offered it.
 
 ### For a stable tag (`v*.*.*`)
 
@@ -140,7 +153,10 @@ repo write, but no end user can see or download the release. To promote:
    published` job already failed the run if anything published is missing from it. Then
    check that each of `latest.yml`, `latest-mac.yml` and `latest-linux.yml` is present
    with a `.sig` sibling, and that the installer each one names in its `path:` field is
-   on the page too. The Windows `.exe`, the macOS `.dmg`, the Linux `.AppImage` and the
+   on the page too. A stable page carries `beta.yml`, `beta-mac.yml` and `beta-linux.yml`
+   beside them: the build that is newest on stable is newest on preview as well, so the
+   preview set is written for every tag shape and only the `latest` set is withheld from
+   a prerelease. The Windows `.exe`, the macOS `.dmg`, the Linux `.AppImage` and the
    Android `.apk` are the artifacts the four build jobs upload; `.msi` and `.deb` appear
    when `electron-builder` produced them.
 4. Click Publish release.
