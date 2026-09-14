@@ -490,6 +490,16 @@ encryption** → the **Enable sync** switch, which is what makes the
 
 Numbered on from the seven above, so a reference stays unique.
 
+**All three are fixed**, in a pull request of their own, and all three are one
+shape: an affordance drawn as an ordinary enabled control, refusing only once it
+is pressed.
+
+| # | Fixed by | Held by |
+|---|---|---|
+| 8 | The step that draws the two cards asks `PairingAnswerability` before it draws them, rather than `showMyCode()` asking after the offer | The card is disabled and the sentence naming the other direction stands before the press; the guard inside `showMyCode()` stays for a request that never drew the page |
+| 9 | The browser probe ships only where the browser road is the only one — a shell's vault has already answered, on the wire, before the page reaches the device | A case per road, each asserting the row is drawn before asserting what is not in it |
+| 10 | The refusal tells a build with no vault from a platform that refused, on the vault itself rather than on `nativephp-internal.running` | The null vault keeps the sentence written for it; a bound vault that answered no gets one naming what the reader can do, in all 26 locales |
+
 #### 8. A code that cannot be answered is still offered, and refuses on press
 
 **E2-R23 surface, both handsets.** The requirement says a device that can
