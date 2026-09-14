@@ -31,6 +31,13 @@ body = """
 trim = true
 
 [git]
+# Only a release tag bounds a release. The workflow fires on `tags: ['v*']` and
+# nothing else, but git-cliff reads EVERY tag as a previous release unless it is
+# told otherwise -- and ten `2.0.0-probe.N` tags sit on main's own history. With
+# them counted, `--unreleased` reported 21 entries where the span since v1.3.0
+# holds 1,370: a v2 body describing a fortnight, from a config whose own skips
+# were written for "a release the size of a major version".
+tag_pattern = "^v[0-9]"
 conventional_commits = true
 # Unconventional commits are kept rather than dropped: notes that silently
 # omit work are worse than an untidy "Other" section.

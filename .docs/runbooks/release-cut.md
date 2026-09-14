@@ -17,7 +17,13 @@ the version policy and channel semantics, see
    job will fail in the same way — fix it on `main` first rather than chasing it
    through the release.
 2. Confirm the change set is what you mean to ship. `git log --oneline <last-tag>..HEAD`
-   is the raw material; if any commit looks unfinished, land the fix before tagging.
+   is the raw material — and `<last-tag>` is the last **release** tag, which is not
+   what `git describe` answers. Ten `2.0.0-probe.N` tags sit on `main`'s own history
+   and are ancestors of it, so `git describe --tags --abbrev=0` names one of those and
+   the range reads a fortnight instead of the span since `v1.3.0`. Use
+   `git tag --list 'v*' --sort=-v:refname | head -1`. The notes themselves are no
+   longer exposed to this — `cliff.toml` pins `tag_pattern` to the same `v*` shape the
+   workflow triggers on — but the command above is yours to scope; if any commit looks unfinished, land the fix before tagging.
    The published notes are narrower than that log — git-cliff builds them from
    `cliff.toml`, which skips `docs`, `ci`, `build`, `test`, `style` and `chore` commits
    and groups the rest by conventional-commit type.
