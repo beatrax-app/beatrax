@@ -822,7 +822,7 @@ jobs:
                   # Per arch, because one name for both is how the x64 image got
                   # overwritten by the arm64 one and shipped under a name that said
                   # nothing about architecture.
-                  compgen -G '*-x64.AppImage' > /dev/null || missing+=('*-x64.AppImage')
+                  compgen -G '*-x86_64.AppImage' > /dev/null || missing+=('*-x86_64.AppImage')
                   compgen -G '*-arm64.AppImage' > /dev/null || missing+=('*-arm64.AppImage')
                   compgen -G '*.deb' > /dev/null || missing+=('*.deb')
                   if [ "${#missing[@]}" -gt 0 ]; then
@@ -863,21 +863,22 @@ jobs:
                   VERSION="${TAG_REF#v}"
                   RELEASE_DATE=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
 
-                  # One manifest per architecture. electron-updater resolves
-                  # latest-linux.yml on x64 and latest-linux-arm64.yml elsewhere, so a
-                  # single manifest names one image to both, which is how an x64
-                  # desktop was pointed at an arm64 download.
-                  for arch in x64 arm64; do
-                      INSTALLER=$(find . -maxdepth 1 -name "*-${arch}.AppImage" -print -quit)
+                  # One manifest per architecture, and each architecture is spelled
+                  # two ways. electron-builder renders ${arch} into an AppImage name
+                  # the way AppImage names it -- `x86_64`, where the same macro gives
+                  # `x64` for a dmg -- while electron-updater resolves
+                  # latest-linux.yml on x64 and latest-linux-arm64.yml on everything
+                  # else. So each row carries the file spelling and the manifest
+                  # suffix, rather than deriving one from the other.
+                  for row in 'x86_64:' 'arm64:-arm64'; do
+                      FILE_ARCH="${row%%:*}"
+                      SUFFIX="${row#*:}"
+                      INSTALLER=$(find . -maxdepth 1 -name "*-${FILE_ARCH}.AppImage" -print -quit)
                       INSTALLER=${INSTALLER#./}
                       if [ -z "$INSTALLER" ]; then
-                          echo "::error::No *-${arch}.AppImage in nativephp/electron/dist/ — an architecture with no manifest is one no desktop can update."
+                          echo "::error::No *-${FILE_ARCH}.AppImage in nativephp/electron/dist/ — an architecture with no manifest is one no desktop can update."
                           exit 1
                       fi
-                      case "$arch" in
-                          x64) SUFFIX='' ;;
-                          *) SUFFIX="-${arch}" ;;
-                      esac
                       SHA512_B64=$(openssl dgst -sha512 -binary "$INSTALLER" | base64 | tr -d '\n')
                       SIZE=$(wc -c < "$INSTALLER" | tr -d ' ')
                       {
@@ -927,8 +928,8 @@ jobs:
                   # here. Naming the architecture is also what makes this test able to
                   # fail the way it did on v2.0.0-rc.2: one name for both arches meant
                   # `find` returned whichever survived, and it was the wrong one.
-                  APPIMAGE=$(find nativephp/electron/dist -maxdepth 1 -name '*-x64.AppImage' -print -quit)
-                  [ -n "$APPIMAGE" ] || { echo "::error::no x64 AppImage to smoke-test."; exit 1; }
+                  APPIMAGE=$(find nativephp/electron/dist -maxdepth 1 -name '*-x86_64.AppImage' -print -quit)
+                  [ -n "$APPIMAGE" ] || { echo "::error::no x86_64 AppImage to smoke-test."; exit 1; }
                   chmod +x "$APPIMAGE"
                   scripts/desktop_smoke.sh "${REF_NAME#v}" \
                       xvfb-run -a "$APPIMAGE" --appimage-extract-and-run --no-sandbox

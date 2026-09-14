@@ -27,12 +27,36 @@ the version policy and channel semantics, see
    The published notes are narrower than that log — git-cliff builds them from
    `cliff.toml`, which skips `docs`, `ci`, `build`, `test`, `style` and `chore` commits
    and groups the rest by conventional-commit type.
-3. Pick the version. The version follows semver — bug fixes bump the patch, feature
+3. **Cutting a stable tag that followed release candidates? Delete them first.**
+   `cliff.toml`'s `tag_pattern` is `^v[0-9]`, which the probe tags do not match and
+   `v2.0.0-rc.3` does. git-cliff `--latest` bounds the notes at the previous matching
+   tag, so a `v2.0.0` pushed while its own candidates still exist announces the span
+   since the last candidate — measured on the v2 line, **7 commits where the span since
+   `v1.3.0` holds 1,651**. Nobody upgrading from the last release reads the candidate
+   notes, so that body describes the release to no one.
+
+   Delete the tag and its prerelease on the remote, and locally, before pushing the
+   stable tag:
+
+   ```sh
+   for t in $(git tag --list 'v2.0.0-rc.*'); do
+       gh release delete "$t" --yes --cleanup-tag 2>/dev/null || git push origin ":refs/tags/$t"
+       git tag -d "$t"
+   done
+   ```
+
+   `--cleanup-tag` removes the tag with the release; the fallback covers a candidate
+   that was tagged but never published, which is what a candidate whose build failed
+   leaves behind. This is deliberate rather than tidy-mindedness: the candidates have
+   served their purpose the moment the stable tag is cut, and leaving them changes what
+   the release says about itself.
+
+4. Pick the version. The version follows semver — bug fixes bump the patch, feature
    additions bump the minor, and a breaking change bumps the major. The spec owns the
    policy behind that; see
    [`70-operations/releasing.md`](https://github.com/beatrax-app/spec/blob/main/70-operations/releasing.md).
-4. Give any breaking change its prominence, below.
-5. Run **release-preflight** against the version you picked — the Actions tab, "Run
+5. Give any breaking change its prominence, below.
+6. Run **release-preflight** against the version you picked — the Actions tab, "Run
    workflow", the version without its leading `v`. It is the pre-tag checklist run as
    a check rather than remembered, and it asks three things this page cannot: that the
    spec marks the version `releasable`, that the tag does not already exist, and that
