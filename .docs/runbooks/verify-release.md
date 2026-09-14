@@ -30,6 +30,15 @@ downloaded rather than over a list of expected names, and the `verify published`
 reads the asset list back off the release page and fails if any of it is missing from
 the file.
 
+Which manifests a page carries depends on the tag it was cut from, and a hyphen in the
+version is the whole test. A stable release publishes both sets — the build newest on
+stable is newest on preview as well — but a prerelease publishes the preview set alone,
+because a prerelease must never appear under the name the stable channel resolves. So
+on a preview page the three names above read `beta-mac.yml`, `beta.yml` and
+`beta-linux.yml`, each with the same `.sig` sibling, signed in the same pass by the same
+key. Nothing else here changes: the checksum file is written for every tag shape under
+the one name, and covers that page in full.
+
 The `.apk` additionally carries its own Android signature, and the build job refuses to
 upload one that `apksigner` does not attribute to the release keystore.
 
@@ -70,6 +79,9 @@ the section above, reached a different way.
 
 ```sh
 VERSION=1.3.0
+
+# On a preview page this name does not exist and the download is silently empty;
+# read beta-mac.yml there instead, and the same everywhere below.
 gh release download "v${VERSION}" --pattern 'latest-mac.yml'
 
 # The manifest names the one file it covers. Read it rather than guessing:
@@ -86,7 +98,8 @@ sed -n 's/^sha512: //p' latest-mac.yml
 openssl dgst -sha512 -binary "$INSTALLER" | base64 | tr -d '\n'; echo
 ```
 
-For Linux read `latest-linux.yml`, for Windows `latest.yml`; the rest is identical.
+For Linux read `latest-linux.yml`, for Windows `latest.yml` — or `beta-linux.yml` and
+`beta.yml` on a preview page; the rest is identical.
 
 On Windows, PowerShell's `Get-FileHash` prints hex, so hash and encode explicitly:
 
