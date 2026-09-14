@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Auth\Public\Http\Livewire;
 
+use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Contracts\View\Factory as ViewFactory;
 use Illuminate\Contracts\View\View;
@@ -400,8 +401,13 @@ final class AppLockSettingsSection extends Component
         ];
     }
 
-    public function render(ViewFactory $views): View
+    public function render(ViewFactory $views, ConfigRepository $config): View
     {
-        return $views->make('auth::livewire.app-lock-settings-section');
+        return $views->make('auth::livewire.app-lock-settings-section', [
+            // Whether the browser probe in the view may speak at all. In a
+            // shell the platform has already answered, off its own vault,
+            // before the page reached the device.
+            'platformOwnsTheAnswer' => $config->get('nativephp-internal.running') === true,
+        ]);
     }
 }

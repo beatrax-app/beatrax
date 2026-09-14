@@ -116,3 +116,46 @@ it('answers for a desktop and refuses for a phone with no relay', function (): v
         app(RelayConfig::class)->setEndpointUrl(null);
     }
 })->group('CodeNobodyCouldAnswer');
+
+// The press was refused; the OFFER was not. A card that draws enabled and
+// refuses when pressed has already offered a code nothing could answer, and
+// the requirement is about the offer. Walked on an A51 and an iPhone 12 mini
+// on 2026-09-13: both drew the card enabled, with no aria-disabled, and the
+// same press could be repeated for as long as the reader cared to.
+function answerableChooseDirectionHtml(User $user): string
+{
+    /** @var Session $session */
+    $session = app(Session::class);
+    app(DeviceIdentityService::class)->generateAndPersist((int) $user->id, $session);
+
+    return Livewire::test(PairingFlowModal::class, ['open' => true])->html();
+}
+
+it('does not offer a code nothing could answer, and names the direction before any press', function (): void {
+    $user = answerableUser('answer-none-offer');
+    $this->actingAs($user);
+    answerabilityIs(false);
+
+    $html = answerableChooseDirectionHtml($user);
+
+    // Apostrophe-free needles: Blade escapes the copy's own apostrophe, so the
+    // sentence as Lang returns it is not the sentence in the markup.
+    expect($html)->toContain('no relay is set up')
+        ->and($html)->toContain('enter that here instead')
+        ->and($html)->toContain('aria-describedby="pairing-show-code-unavailable"')
+        ->and($html)->not->toContain('wire:click="showMyCode"');
+})->group('CodeNobodyCouldAnswer');
+
+it('offers the card, and no standing refusal, where the answer has a road home', function (): void {
+    // The control. Without it "not offered" would also pass on a build that
+    // stopped drawing the card at all.
+    $user = answerableUser('answer-yes-offer');
+    $this->actingAs($user);
+    answerabilityIs(true);
+
+    $html = answerableChooseDirectionHtml($user);
+
+    expect($html)->toContain('wire:click="showMyCode"')
+        ->and($html)->not->toContain('pairing-show-code-unavailable')
+        ->and($html)->not->toContain('no relay is set up');
+})->group('CodeNobodyCouldAnswer');
