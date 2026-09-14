@@ -270,6 +270,7 @@ parameters:
 
 rules:
     - Beatrax\Tooling\PhpStan\Rules\BoundaryRule
+    - Beatrax\Tooling\PhpStan\Rules\FingerprintTupleRule
 
 services:
     # Livewire's SupportPageComponents adds `extends()` to Illuminate\View\View
