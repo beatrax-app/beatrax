@@ -161,7 +161,11 @@ jobs:
     gate:
         name: gate (PHP ${{ matrix.php }})
         runs-on: ubuntu-latest
-        timeout-minutes: 15
+        # The whole suite unsharded is ~12 minutes of Pest on its own -- the
+        # three ci.yml shards sum to 11m55s and they already saturate their
+        # cores, so running them in one job does not compress. 15 minutes was
+        # a budget for a run that had never once reached the end.
+        timeout-minutes: 30
         strategy:
             fail-fast: true
             matrix:
@@ -229,8 +233,31 @@ jobs:
                   mkdir -p storage/app/inbox storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
                   chmod -R u+rwX storage bootstrap/cache
 
+            # ci.yml restores both of these and records what they are worth:
+            # Pint 175s to 4s, PHPStan 125s to 3s. This job never got them, so
+            # on the rc.1 tag it spent 207s on Pint and 38s on PHPStan out of a
+            # 15 minute budget. A tag run restores the default branch's cache,
+            # which ci.yml writes on every push to main.
+            - name: Cache Pint results
+              uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+              with:
+                  path: .pint.cache
+                  key: pint-${{ runner.os }}-${{ hashFiles('pint.json', '**/composer.lock') }}-${{ github.sha }}
+                  restore-keys: |
+                      pint-${{ runner.os }}-${{ hashFiles('pint.json', '**/composer.lock') }}-
+                      pint-${{ runner.os }}-
+
+            - name: Cache PHPStan result cache
+              uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+              with:
+                  path: .phpstan-cache
+                  key: phpstan-${{ runner.os }}-8.5-${{ hashFiles('**/composer.lock', 'phpstan.neon') }}-${{ github.sha }}
+                  restore-keys: |
+                      phpstan-${{ runner.os }}-8.5-${{ hashFiles('**/composer.lock', 'phpstan.neon') }}-
+                      phpstan-${{ runner.os }}-8.5-
+
             - name: Pint (code-style)
-              run: vendor/bin/pint --test
+              run: vendor/bin/pint --test --cache-file=.pint.cache
 
             - name: Larastan level 10 strict
               run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
