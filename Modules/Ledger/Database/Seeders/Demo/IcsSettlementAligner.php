@@ -71,41 +71,39 @@ final class IcsSettlementAligner
     {
         $currency = $settlement->settled_currency;
 
-        Transaction::query()
-            ->where('id', $settlement->id)
-            ->update(TransactionAmount::relate($chargedMinor, $currency, $chargedMinor, $currency)->toColumns());
+        $this->rewrite([$settlement->id], $chargedMinor, $currency);
 
-        $cardLeg = Transaction::query()
+        $cardLegIds = Transaction::query()
             ->where('user_id', $user->id)
             ->where('source_format', 'demo')
             ->where('source_ref', 'like', DemoTransactionRef::IcsSettlementCardSide->pattern())
-            ->whereDate('posted_at', $settlement->posted_at->toDateString());
+            ->whereDate('posted_at', $settlement->posted_at->toDateString())
+            ->pluck('id')
+            ->all();
 
-        $cardLegIds = $cardLeg->clone()->pluck('id')->all();
-
-        $cardLeg->update(TransactionAmount::relate(-$chargedMinor, $currency, -$chargedMinor, $currency)->toColumns());
-
-        // amount_minor is part of the fingerprint tuple and a builder update
-        // writes it without re-deriving the digest. Left alone, both legs of
-        // every aligned settlement key values they no longer hold, and a
-        // re-import of the same statement would book a second copy of each.
-        $this->restamp([$settlement->id, ...$cardLegIds]);
+        $this->rewrite($cardLegIds, -$chargedMinor, $currency);
     }
 
+    // The amount is one of the eight columns the digest is composed over, so
+    // it is composed here and written in the same statement: a row is never
+    // left keying a figure it no longer holds, not even between two writes.
+    // The tuple reads the columns being written, so it describes exactly them.
     /**
      * @param  list<int>  $ids
      */
-    private function restamp(array $ids): void
+    private function rewrite(array $ids, int $amountMinor, string $currency): void
     {
+        $columns = TransactionAmount::relate($amountMinor, $currency, $amountMinor, $currency)->toColumns();
+
         foreach (Transaction::query()->whereIn('id', $ids)->get() as $row) {
-            Transaction::query()->where('id', $row->id)->update([
+            Transaction::query()->where('id', $row->id)->update($columns + [
                 'fingerprint' => $this->fingerprints->composeTuple(new FingerprintTuple(
                     userId: (int) $row->user_id,
                     accountId: (int) $row->account_id,
                     postedAtDate: substr((string) $row->getRawOriginal('posted_at'), 0, 10),
                     bookedAtDateTime: (string) $row->getRawOriginal('booked_at'),
-                    amountMinor: (int) $row->amount_minor,
-                    currency: (string) $row->currency,
+                    amountMinor: $columns['amount_minor'],
+                    currency: $columns['currency'],
                     counterpartyNormalized: (string) $row->counterparty_normalized,
                     occurrenceOrdinal: (int) $row->occurrence_ordinal,
                 )),
