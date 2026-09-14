@@ -671,6 +671,23 @@ is disclosed. `merchants.name` receives a decrypted `transactions.counterparty_n
 `ADecryptedValueLandsOnlyWhereItMayArchTest` pins every production file that both opens a sealed
 value and writes to the database, each with where the opened value lands. Twelve today.
 
+Its sibling `AnOpenedValueThatCouldNotBeOpenedArchTest` reads the same call sites and asks the
+other question. Not *may this destination hold a plaintext copy*, but *what happens when the read
+came back empty*. `SensitiveColumnCodec` answers `''` — not the stored bytes — for a value shaped
+like ciphertext that no epoch on this device opened, so a screen renders nothing rather than
+base64. Written or announced, that `''` reads as "the value is empty" and overwrites what it stood
+for. Thirteen files and fourteen call sites — `RuleApplier` holds two — and four of those files
+carried a defect: an append that swallowed the note it was added to, an ignore that announced a
+blank name over a peer's good copy, a rule that wiped a tax note, and a re-balance that destroyed
+another leg's note.
+
+`UnopenedValue::wasBlanked()` is the shared predicate all four now use. It reads the **stored**
+value rather than the codec's `decrypted` flag, because that flag is false for a pre-encryption row
+too, where the value handed back IS the value and must not be refused. The asymmetry it encodes is
+the one *Why refusing, rather than a background key source* sets out above: `BlindIndexCodec::derive()`
+throws, because an identity must never be quietly wrong, while `decryptValue()` blanks, because a
+screen must not show base64. All four defects were that second behaviour being read as the first.
+
 The op log keeps its own copy, and the migration does not reach it. Entries are per field, and
 `metadata` is not a sealed column, so a `metadata` entry is stored in the clear beside the sealed
 `display_name` ones — measured on this install, `display_name` entries carry a `gdk_epoch` and
