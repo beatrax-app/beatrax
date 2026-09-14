@@ -8,7 +8,9 @@ use Carbon\CarbonImmutable;
 use Modules\Core\Models\User;
 use Modules\Ledger\Models\Account;
 use Modules\Ledger\Models\Transaction;
+use Modules\Ledger\Public\Dto\FingerprintTuple;
 use Modules\Ledger\Public\Enums\TransactionType;
+use Modules\Ledger\Public\Services\FingerprintComposer;
 use Modules\Ledger\Public\ValueObjects\TransactionAmount;
 
 // A card settlement IS the statement it pays. The resolver confirms a bulk
@@ -17,6 +19,8 @@ use Modules\Ledger\Public\ValueObjects\TransactionAmount;
 // as the card's own rows grew past it — and /chains said "Balances exactly".
 final class IcsSettlementAligner
 {
+    public function __construct(private readonly FingerprintComposer $fingerprints) {}
+
     public function align(User $user, Account $card): void
     {
         $periodStart = null;
@@ -71,11 +75,41 @@ final class IcsSettlementAligner
             ->where('id', $settlement->id)
             ->update(TransactionAmount::relate($chargedMinor, $currency, $chargedMinor, $currency)->toColumns());
 
-        Transaction::query()
+        $cardLeg = Transaction::query()
             ->where('user_id', $user->id)
             ->where('source_format', 'demo')
             ->where('source_ref', 'like', DemoTransactionRef::IcsSettlementCardSide->pattern())
-            ->whereDate('posted_at', $settlement->posted_at->toDateString())
-            ->update(TransactionAmount::relate(-$chargedMinor, $currency, -$chargedMinor, $currency)->toColumns());
+            ->whereDate('posted_at', $settlement->posted_at->toDateString());
+
+        $cardLegIds = $cardLeg->clone()->pluck('id')->all();
+
+        $cardLeg->update(TransactionAmount::relate(-$chargedMinor, $currency, -$chargedMinor, $currency)->toColumns());
+
+        // amount_minor is part of the fingerprint tuple and a builder update
+        // writes it without re-deriving the digest. Left alone, both legs of
+        // every aligned settlement key values they no longer hold, and a
+        // re-import of the same statement would book a second copy of each.
+        $this->restamp([$settlement->id, ...$cardLegIds]);
+    }
+
+    /**
+     * @param  list<int>  $ids
+     */
+    private function restamp(array $ids): void
+    {
+        foreach (Transaction::query()->whereIn('id', $ids)->get() as $row) {
+            Transaction::query()->where('id', $row->id)->update([
+                'fingerprint' => $this->fingerprints->composeTuple(new FingerprintTuple(
+                    userId: (int) $row->user_id,
+                    accountId: (int) $row->account_id,
+                    postedAtDate: substr((string) $row->getRawOriginal('posted_at'), 0, 10),
+                    bookedAtDateTime: (string) $row->getRawOriginal('booked_at'),
+                    amountMinor: (int) $row->amount_minor,
+                    currency: (string) $row->currency,
+                    counterpartyNormalized: (string) $row->counterparty_normalized,
+                    occurrenceOrdinal: (int) $row->occurrence_ordinal,
+                )),
+            ]);
+        }
     }
 }
