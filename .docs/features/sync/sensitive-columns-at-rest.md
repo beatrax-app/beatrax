@@ -669,17 +669,22 @@ is disclosed. `merchants.name` receives a decrypted `transactions.counterparty_n
 *because* it is disclosed. `counterparties.metadata` was neither.
 
 `ADecryptedValueLandsOnlyWhereItMayArchTest` pins every production file that both opens a sealed
-value and writes to the database, each with where the opened value lands. Twelve today.
+value and writes to the database, each with where the opened value lands. Fourteen today.
 
 Its sibling `AnOpenedValueThatCouldNotBeOpenedArchTest` reads the same call sites and asks the
 other question. Not *may this destination hold a plaintext copy*, but *what happens when the read
 came back empty*. `SensitiveColumnCodec` answers `''` — not the stored bytes — for a value shaped
 like ciphertext that no epoch on this device opened, so a screen renders nothing rather than
 base64. Written or announced, that `''` reads as "the value is empty" and overwrites what it stood
-for. Thirteen files and fourteen call sites — `RuleApplier` holds two — and four of those files
-carried a defect: an append that swallowed the note it was added to, an ignore that announced a
-blank name over a peer's good copy, a rule that wiped a tax note, and a re-balance that destroyed
-another leg's note.
+for. Fifteen files and twenty-one call sites — `TransactionDetail` and `PaypalFundingResolver`
+hold three each — and four of those files carried a defect: an append that swallowed the note it
+was added to, an ignore that announced a blank name over a peer's good copy, a rule that wiped a
+tax note, and a re-balance that destroyed another leg's note.
+
+Both denominators moved when the guards learned to read `decryptRow()`, the bulk open, which their
+pattern had never matched. The call-site figure moved for a duller reason: it had been read off one
+entry's note rather than counted, and counting is the only thing that makes a denominator mean
+anything.
 
 `UnopenedValue::wasBlanked()` is the shared predicate all four now use. It reads the **stored**
 value rather than the codec's `decrypted` flag, because that flag is false for a pre-encryption row
@@ -1982,8 +1987,11 @@ could not detect it, because it only greps reasons for `broken`/`TODO`/`FIXME`.
 That is now structural rather than written down. Nothing is skipped before scanning, so the
 question is asked of the tree instead of of the prose written about it: the guard re-runs the
 whole scan with `accounts.iban` appended to the registry and asserts the exact list of calls
-that turn red. There are **twenty**, in fourteen files — six of them raw `create()` writes the
-old reading never looked at, because it matched `->insert(` and `->update(` and nothing else.
+that turn red. There are **twenty-two**, in seventeen files — thirteen `where`s, eight writes and
+one `orderBy` — and the writes are the half the old reading never looked at, because it matched
+`->insert(` and `->update(` and nothing else. These three figures were twenty, fourteen and six
+when the paragraph was written: the guard pins the list and grew with the tree, and the sentence
+about the guard did not. A count no test holds is a count that rots.
 The reason each exemption states is still checked against `knowinglyPlaintext()`, but it is no
 longer the only thing standing between a promoted column and a silent false green.
 

@@ -27,6 +27,8 @@ const A_DECRYPT_THAT_ALSO_WRITES = [
     'Modules/Chains/Internal/Resolvers/PaypalFundingResolver.php' => 'transactions.raw_payload and transactions.counterparty_iban, opened to parse the event and to match an alias. What reaches chain_links.evidence is the funding ACCOUNT IBAN -- the link is refused unless accountIdForIban() resolves one -- and accounts.iban is disclosed plaintext, too narrow to hold a nonce and ciphertext. The counterparty IBAN is deliberately kept out, which the arm says at the write.',
     'Modules/Counterparties/Internal/Actions/LabelCounterparty.php' => 'counterparties.display_name, opened only to announce it under its own sealed column name, which OpLogWriter re-seals under the current epoch. The row write carries metadata.ignored alone.',
     'Modules/Counterparties/Internal/Actions/MergeCounterparties.php' => 'counterparties.display_name, opened to compare names. The fold records what it absorbed by slug, which the registry discloses and which is opaque for a name that spells an account number, and never by the name itself.',
+    'Modules/Counterparties/Database/Seeders/Demo/DemoCounterpartiesSeeder.php' => 'transactions.counterparty_name, counterparty_iban and description, opened to rebuild the CanonicalTransaction the resolver takes. Production hands the resolver the plaintext DTO it sealed the row from; this opens rows it sealed itself moments earlier, holding the key by construction. Nothing opened here is written back.',
+    'Modules/Counterparties/Internal/Resolver/CounterpartyResolverService.php' => 'counterparties.iban, merchant_name and display_name, opened to decide what a later pass learned that the stored row does not have. iban and merchant_name are written back as the CALLER\'s plaintext, not the opened value; display_name is the one opened value that is written, and only when isUnreadable() says it was read.',
     'Modules/Ledger/Internal/Http/Livewire/Concerns/ManagesSplitEditor.php' => 'transaction_splits.note, opened into the editor the reader types in. SaveTransactionSplit re-seals it on the way back.',
     'Modules/Ledger/Internal/Http/Livewire/TransactionDetail.php' => 'transactions.note, description and counterparty_name, opened for the page the reader is reading. The writes carry pair_transaction_id and a note the codec sealed.',
     'Modules/Ledger/Internal/Services/StripAsnDescriptionDelimiters.php' => 'transactions.description, opened to unwrap the delimiters and written back to the same column through encryptValue.',
@@ -35,7 +37,7 @@ const A_DECRYPT_THAT_ALSO_WRITES = [
     'Modules/Recurring/Internal/Detectors/IncomeSeriesDetector.php' => 'transactions.counterparty_iban, opened before it becomes a grouping key. What reaches recurring_series is the blind index CounterpartyKey::forIban derives, beside detected_name, which the registry discloses.',
 ];
 
-const A_DECRYPT_CALL = '/->\s*(?:decryptValue|decryptAttrs)\s*\(/';
+const A_DECRYPT_CALL = '/->\s*(?:decryptValue|decryptRow)\s*\(/';
 
 // Word parts, not a closed list of spellings, for the reason SensitiveColumnScan
 // gives: the next write helper to be named `saveChunked()` is not knowable.
