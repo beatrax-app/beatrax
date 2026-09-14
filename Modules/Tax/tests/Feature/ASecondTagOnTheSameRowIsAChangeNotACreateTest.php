@@ -15,17 +15,16 @@ use Modules\Tax\Public\Actions\TagTransaction;
 
 uses(RefreshDatabase::class);
 
-// A pairing on two real devices copied 8,481 op-log records and reconciled 47
-// tables, and `tax_transaction_tags` produced none: seventeen rows stayed on the
-// device that wrote them. Quarantine was 0 and the row counts agreed, so nothing
-// reported it — the loss was visible only against a plaintext shadow. The table
-// is covered, sits in the insertion order and is not device-local, and the
-// action announces on every path it returns true from; what was missing was
-// anything that would say so if that stopped being true.
+// `PotAndTaxTagCaptureTest` already asserts that tagging a transaction reaches
+// the log as a create and that untagging leaves a tombstone. It tags with a null
+// category, a null note and a null year, and it never tags the same row twice.
 //
-// Recorded in the version manifest's own account of that run and nowhere else:
-// nothing on a feature page names it, no issue tracks it, and until now no test
-// read it.
+// Both of those are where the history is. A create naming a row the peer already
+// holds is discarded in silence, so announcing a re-tag as a create left two
+// devices disagreeing for good — no quarantine, no error, nothing to see. And
+// the note is a sealed column that travels as plaintext, because the writer
+// seals it again under the current epoch; a tag carrying no values never
+// exercises that.
 
 function taxTagCaptureUser(): User
 {
@@ -121,7 +120,7 @@ function taxTagOps(int $userId)
         ->get();
 }
 
-it('puts a tag on the wire the first time one is written', function (): void {
+it('sends the values it was given, not just the row', function (): void {
     ['user' => $user, 'transaction' => $tx, 'categoryId' => $categoryId] = taxTagCaptureFixtures();
     bindTaxTagCaptureWriter((int) $user->id);
 
@@ -131,17 +130,6 @@ it('puts a tag on the wire the first time one is written', function (): void {
     // The action refuses a movement that cannot carry a tag and answers false,
     // which would empty the log for a reason that is not a capture failure.
     expect($tagged)->toBeTrue('the fixture transaction was refused a tag, so nothing below is about capture');
-
-    expect(taxTagOps((int) $user->id))
-        ->not->toBeEmpty('a tag that reaches no op log can never reach a peer, and nothing else reports the loss')
-        ->and(taxTagOps((int) $user->id)->pluck('op_type')->unique()->all())->toBe(['create_row']);
-});
-
-it('sends the columns a peer needs to rebuild a row it has never held', function (): void {
-    ['user' => $user, 'transaction' => $tx, 'categoryId' => $categoryId] = taxTagCaptureFixtures();
-    bindTaxTagCaptureWriter((int) $user->id);
-
-    app(TagTransaction::class)->execute((int) $user->id, (int) $tx->id, $categoryId, 'KvK annual fee', 2026);
 
     expect(taxTagOps((int) $user->id)->pluck('field')->all())
         ->toContain('user_id', 'transaction_id', 'deduction_category_id', 'note', 'tax_year_override');
