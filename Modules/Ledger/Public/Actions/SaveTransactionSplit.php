@@ -28,6 +28,7 @@ use Modules\Sync\Public\Events\TransactionMutated;
 use Modules\Sync\Public\Events\TransactionSplitMutated;
 use Modules\Sync\Public\Services\DependentRowCascade;
 use Modules\Sync\Public\Services\SensitiveColumnCodec;
+use Modules\Sync\Public\Support\UnopenedValue;
 use stdClass;
 
 final readonly class SaveTransactionSplit implements SavesTransactionSplit
@@ -280,6 +281,17 @@ final readonly class SaveTransactionSplit implements SavesTransactionSplit
     private function updateLeg(User $user, int $transactionId, int $legId, array $leg, int $index, string $currency, ?stdClass $old): ?TransactionSplitMutated
     {
         $normalizedNote = self::normalizeNote($leg['note']);
+        $storedNote = $old->note ?? null;
+        $openedNote = $this->decryptNote($storedNote, $user->id);
+
+        // The editor loads every leg's note decrypted, so one this device could
+        // not open posts back as the empty box it was shown, and a save that
+        // touched another leg's amount would write null over it. Where nothing
+        // was typed and the stored bytes did not open, the bytes stay.
+        $keepStored = $normalizedNote === null
+            && is_string($storedNote)
+            && UnopenedValue::wasBlanked($storedNote, $openedNote);
+
         // The parent's currency, on every write and not only the first. A leg
         // took it at insert and never again, so a parent that changed currency
         // left its legs priced in the old one -- and re-balancing the split was
@@ -288,14 +300,16 @@ final readonly class SaveTransactionSplit implements SavesTransactionSplit
             'category_id' => $leg['category_id'],
             'settled_amount_minor' => $leg['settled_amount_minor'],
             'settled_currency' => $currency,
-            'note' => $normalizedNote,
+            'note' => $keepStored ? $openedNote : $normalizedNote,
             'sort_order' => $index,
         ];
 
         // $fields stays plaintext as the dirty-diff and event source, or the
         // op-log's own encrypt-on-write would double-encrypt the note.
         $dbFields = $fields;
-        $dbFields['note'] = $this->encryptNote($normalizedNote, $user->id);
+        $dbFields['note'] = $keepStored
+            ? $storedNote
+            : $this->encryptNote($normalizedNote, $user->id);
 
         $this->db->connection()
             ->table('transaction_splits')
@@ -309,7 +323,7 @@ final readonly class SaveTransactionSplit implements SavesTransactionSplit
             'category_id' => $old->category_id ?? null,
             'settled_amount_minor' => $old->settled_amount_minor ?? null,
             'settled_currency' => $old->settled_currency ?? null,
-            'note' => $this->decryptNote($old->note ?? null, $user->id),
+            'note' => $openedNote,
             'sort_order' => $old->sort_order ?? null,
         ] : [];
 
