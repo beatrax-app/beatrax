@@ -39,6 +39,16 @@ return [
             'serve' => false,
             'throw' => false,
             'report' => false,
+
+            // Imports land here as imports/{userId}/{sha256}, the only plaintext
+            // user financial data on disk. With no keys here Flysystem writes at
+            // the process umask -- 0644 measured -- and a file carries its own
+            // mode into an export archive after this 0700 root stops covering it.
+            'visibility' => 'private',
+            'permissions' => [
+                'file' => ['public' => 0644, 'private' => 0600],
+                'dir' => ['public' => 0755, 'private' => 0700],
+            ],
         ],
 
     ],
