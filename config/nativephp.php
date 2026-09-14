@@ -73,6 +73,12 @@ return [
         // tree, which holds the dev-only PHPStan rules.
         'tools',
 
+        // Python bytecode from .github/scripts/. Gitignored, which keeps it out
+        // of the repository and not off the disk a build runs on, so the
+        // packager would still copy whatever a local run left behind.
+        '__pycache__',
+        '*.pyc',
+
         '.docs',
         '.github',
 

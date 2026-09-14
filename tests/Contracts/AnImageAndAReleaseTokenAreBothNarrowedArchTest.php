@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Modules\Core\Public\Support\PatternScan;
+
 // Two supply-chain properties an OpenSSF Scorecard run found open on this
 // repository, pinned here because nothing else re-reads them: a base image
 // named only by tag can be moved under the build by whoever owns the tag, and
@@ -83,8 +85,12 @@ it('does not let the release token write from every job', function (string $work
     expect($body)->not->toBe('', sprintf('%s is not where this rule looks, so it read nothing.', $workflow));
 
     // The top-level block is the one at column zero; a job's own block is
-    // indented, and raising it there is the point.
-    expect(preg_match('/^permissions:\n(?<block>(?:[ \t]+\S.*\n)+)/m', $body, $m))->toBe(1, sprintf('%s has no top-level permissions block, so its jobs take the repository default rather than a stated one.', $workflow));
+    // indented, and raising it there is the point. PatternScan rather than a
+    // bare preg_match: a PCRE that gave up returns false, which reads here as
+    // "no write found" — the answer that passes.
+    $match = PatternScan::first('/^permissions:\n(?<block>(?:[ \t]+\S.*\n)+)/m', $body);
 
-    expect(str_contains($m['block'], 'write'))->toBeFalse(sprintf('%s grants write at the top level, so every job it runs — checkout, build, upload — holds a token that can write to the repository. Grant it on the job that publishes instead. Block: %s', $workflow, trim($m['block'])));
+    expect($match)->not->toBeEmpty(sprintf('%s has no top-level permissions block, so its jobs take the repository default rather than a stated one.', $workflow));
+
+    expect(str_contains($match['block'], 'write'))->toBeFalse(sprintf('%s grants write at the top level, so every job it runs — checkout, build, upload — holds a token that can write to the repository. Grant it on the job that publishes instead. Block: %s', $workflow, trim($match['block'])));
 })->with(SUPPLY_RELEASE_WORKFLOWS);
