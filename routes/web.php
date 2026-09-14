@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Route;
+use Modules\Desktop\Internal\Http\Middleware\EnsureDatabaseReady;
 
 // App-wide web routes live here. Module-local web routes are loaded from
 // each module's ServiceProvider.
@@ -105,3 +106,27 @@ Route::get('/icon.png', fn () => pngResponse(public_path('icon.png')))
 
 Route::get('/splash.png', fn () => pngResponse(public_path('splash.png')))
     ->middleware(['web'])->name('app.splash');
+
+/*
+ * A URI nothing matched, answered from inside the middleware group.
+ *
+ * Without this the miss never enters the group at all, so there is no session
+ * by the time the error view renders — and that view resolves its chrome from
+ * exactly there. Measured against this file's own `abort(404)` routes, which
+ * do pass through it: on one session a miss inside a route answered
+ * `lang="sl"` and the Slovenian title, while a miss on an unmatched URI
+ * answered `lang="en"` and the English one. Same view, same status, same
+ * reader. The copy was never the gap.
+ *
+ * `abort(404)` rather than a rendered view, so the miss takes the path the
+ * matched routes already take and content negotiation still answers JSON to a
+ * client that asked for it.
+ */
+Route::fallback(fn () => abort(404))
+    ->middleware(['web'])
+    // A miss is a miss whoever is asking. The group's gate redirects a device
+    // with no account yet, and under the fallback that turned every unknown
+    // URI into a redirect instead of a 404 -- including `/icons/../.env`,
+    // which a test asserts is refused. The session and the language are what
+    // this route joined the group for; the gate is not.
+    ->withoutMiddleware([EnsureDatabaseReady::class]);
