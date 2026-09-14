@@ -1196,8 +1196,13 @@ jobs:
         runs-on: ubuntu-latest
         timeout-minutes: 10
         # The one job that creates the release and edits it afterwards.
+        # id-token and attestations belong to the attestation step: Sigstore
+        # signs with this job's OIDC identity, so the token has to be able to
+        # prove which workflow it is. Both stay here rather than at the top.
         permissions:
             contents: write
+            id-token: write
+            attestations: write
         steps:
             - name: Check out the source
               uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -1220,6 +1225,7 @@ jobs:
                   path: artifacts
 
             - name: Write the checksum file covering every published artefact
+              id: checksums
               # Each publisher manifest binds exactly the one installer its
               # `path:` field names, so the `.msi`, the `.deb` and the `.apk`
               # reach the release page with nothing a downloader can check them
@@ -1259,6 +1265,42 @@ jobs:
 
                   echo "--- ${CHECKSUMS} ---"
                   cat "artifacts/checksums/${CHECKSUMS}"
+
+                  # The attestation step reads this, and the name it needs is
+                  # built from the tag with its leading `v` removed, which a
+                  # workflow expression cannot do.
+                  echo "path=artifacts/checksums/${CHECKSUMS}" >> "$GITHUB_OUTPUT"
+
+            # What the Ed25519 chain does not say: it proves a manifest and a
+            # checksum file came from this pipeline, not that this pipeline built
+            # the binaries they name. Provenance binds each artefact to the
+            # workflow, repository and commit that produced it.
+            #
+            # Driven from the checksum file rather than a path glob, so the
+            # subjects are exactly the set that file covers -- one source of
+            # truth for "what this release contains", and no glob that might
+            # take in a directory or miss an artefact a build job adds later.
+            - name: Attest what each build produced
+              id: attest
+              uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8  # v4.2.2
+              with:
+                  subject-checksums: ${{ steps.checksums.outputs.path }}
+
+            - name: Carry the attestation onto the release page
+              # The attestation API alone is not enough: `gh attestation verify`
+              # reads it and a downloader reading the release page does not.
+              env:
+                  TAG: ${{ github.ref_name }}
+                  BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+              run: |
+                  set -euo pipefail
+                  if [ -z "${BUNDLE}" ] || [ ! -f "${BUNDLE}" ]; then
+                      echo "::error::the attestation step reported no bundle, so the release would publish without provenance."
+                      exit 1
+                  fi
+                  mkdir -p artifacts/attestations
+                  cp "${BUNDLE}" "artifacts/attestations/beatrax-${TAG#v}.intoto.jsonl"
+                  echo "attestation: $(wc -c < "${BUNDLE}") bytes"
 
             - name: Sign the publisher manifests and the checksum file with Ed25519
               env:
@@ -1457,7 +1499,7 @@ jobs:
                       # A detached signature is checked by the key, not by a
                       # hash, and the checksum file cannot list itself.
                       case "$asset" in
-                          *.sig | *-checksums.txt) continue ;;
+                          *.sig | *.intoto.jsonl | *-checksums.txt) continue ;;
                       esac
                       found=""
                       for name in "${COVERED[@]}"; do
