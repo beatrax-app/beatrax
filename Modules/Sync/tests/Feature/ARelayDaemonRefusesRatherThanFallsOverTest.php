@@ -151,7 +151,7 @@ it('answers a delivery it cannot store with a refusal rather than a stack trace'
 
     expect($response->getStatus())->toBe(HttpStatus::INTERNAL_SERVER_ERROR)
         ->and($body)->toBe('{"error":"deliver_failed"}')
-        ->and($body)->not->toContain('relay_mailbox', 'an open endpoint must not describe the store behind it')
+        ->and(str_contains($body, 'relay_mailbox'))->toBeFalse('an open endpoint must not describe the store behind it')
         ->and($logger->said('relay:serve: deliver failed.'))->toBeTrue();
 });
 

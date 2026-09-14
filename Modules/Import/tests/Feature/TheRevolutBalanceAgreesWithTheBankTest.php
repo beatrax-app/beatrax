@@ -86,7 +86,12 @@ it('keys every row on the native amount, so a re-import still dedups', function 
     $this->importer->runAndConfirm(REVOLUT_FEE_EXPORT, 'revolut-csv', $this->user);
 
     $composer = app(FingerprintComposer::class);
-    foreach (Transaction::query()->get() as $row) {
+    // The count, not just the rows: an import that wrote nothing would leave
+    // the loop below asserting about no row at all, and pass saying so.
+    $rows = Transaction::query()->get();
+    expect($rows)->toHaveCount(3);
+
+    foreach ($rows as $row) {
         expect($row->fingerprint)->toBe($composer->composeTuple(new FingerprintTuple(
             $this->user->id,
             $this->account->id,

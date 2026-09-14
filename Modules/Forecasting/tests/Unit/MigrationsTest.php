@@ -366,8 +366,7 @@ it('forbids facade imports inside every Forecasting migration', function (): voi
     foreach ($migrations as $file) {
         $contents = (string) file_get_contents($file);
         $stripped = preg_replace('#/\*.*?\*/|//[^\n]*#s', '', $contents) ?? $contents;
-        expect($stripped)->not->toContain(
-            'use Illuminate\\Support\\Facades\\',
+        expect(str_contains($stripped, 'use Illuminate\\Support\\Facades\\'))->toBeFalse(
             sprintf('Migration %s must not import any facade.', $file),
         );
     }

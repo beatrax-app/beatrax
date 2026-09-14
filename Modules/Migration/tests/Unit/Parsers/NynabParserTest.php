@@ -45,7 +45,7 @@ it('NynabParser: parses the v1 golden ZIP fixture into a populated MigrationBatc
     expect($batch->payees)->not->toBeEmpty();
     $payeeNames = $batch->payees->pluck('name')->all();
     expect($payeeNames)->toContain('Albert Heijn', 'Employer', 'Supermarket');
-    expect($payeeNames)->not->toContain('Transfer : Savings', 'Transfer : Checking');
+    expect($payeeNames)->not->toContain('Transfer : Savings')->not->toContain('Transfer : Checking');
 
     expect($batch->budgetAssignments)->toHaveCount(4);
 

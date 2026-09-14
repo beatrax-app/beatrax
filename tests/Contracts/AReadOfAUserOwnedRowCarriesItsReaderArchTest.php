@@ -222,8 +222,7 @@ it('derives the covered tables from the schema, and leaves the users table out o
     expect($owned)
         ->toContain('transactions', 'transaction_splits', 'accounts', 'categories', 'counterparties')
         ->toContain('goals', 'pots', 'saved_reports', 'op_log_entries', 'sessions')
-        ->and($owned)->not->toContain(
-            'users',
+        ->and(in_array('users', $owned, true))->toBeFalse(
             'users answers for itself by primary key, and sweeping it by user_id is how a purge deletes the account it is emptying around',
         );
 });

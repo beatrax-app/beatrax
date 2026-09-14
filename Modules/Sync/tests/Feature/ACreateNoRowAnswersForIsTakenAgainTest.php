@@ -280,7 +280,7 @@ it('brings the peer\'s sealed name back readable when the key is held', function
     $sealed = $this->db->connection()->table('op_log_entries')
         ->where('table_name', 'counterparties')->where('field', 'display_name')->value('value');
 
-    expect($sealed)->not->toContain('Kpn-mobiel', 'The fixture stored the name in the clear, so nothing below is a test of sealing.');
+    expect(str_contains((string) $sealed, 'Kpn-mobiel'))->toBeFalse('The fixture stored the name in the clear, so nothing below is a test of sealing.');
 
     $this->artisan('sync:repair-stranded-creates', ['--user' => (string) $this->userId, '--apply' => true])
         ->expectsOutputToContain('1 row(s) placed in counterparties')

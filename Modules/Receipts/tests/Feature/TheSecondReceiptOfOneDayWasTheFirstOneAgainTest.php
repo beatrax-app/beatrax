@@ -56,7 +56,12 @@ it('hashes each row over the ordinal it actually stored', function (): void {
 
     $composer = app(FingerprintComposer::class);
 
-    foreach (DB::table('transactions')->orderBy('occurrence_ordinal')->get() as $row) {
+    // Both rows, counted: a bridge that wrote neither would leave the loop
+    // below asserting about nothing, and the case would pass on that.
+    $rows = DB::table('transactions')->orderBy('occurrence_ordinal')->get();
+    expect($rows)->toHaveCount(2);
+
+    foreach ($rows as $row) {
         expect($row->fingerprint)->toBe($composer->composeTuple(new FingerprintTuple(
             userId: (int) $row->user_id,
             accountId: (int) $row->account_id,

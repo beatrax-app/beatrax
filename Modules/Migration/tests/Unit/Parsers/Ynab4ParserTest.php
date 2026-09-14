@@ -44,7 +44,7 @@ it('Ynab4Parser: parses the v1 golden fixture into a populated MigrationBatch', 
     expect($batch->payees)->not->toBeEmpty();
     $payeeNames = $batch->payees->pluck('name')->all();
     expect($payeeNames)->toContain('Albert Heijn', 'Employer', 'Supermarket');
-    expect($payeeNames)->not->toContain('Transfer : Savings', 'Transfer : Checking');
+    expect($payeeNames)->not->toContain('Transfer : Savings')->not->toContain('Transfer : Checking');
 
     // 2 months x 2 categories = 4 assignment rows.
     expect($batch->budgetAssignments)->toHaveCount(4);

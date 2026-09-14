@@ -245,7 +245,7 @@ it('honors ?from= for page-refresh-reconnect — second handle observes only lat
     foreach (['line-1', 'line-2'] as $alreadySeen) {
         // Timing-tolerant: only assert on a line the cut actually contained.
         if (str_contains($firstHandleBytes, $alreadySeen.\PHP_EOL)) {
-            expect($lines)->not->toContain($alreadySeen,
+            expect(in_array($alreadySeen, $lines, true))->toBeFalse(
                 sprintf("Reconnect must not replay %s (line was present in the first handle's snapshot at offset %s)", $alreadySeen, $cutOffset));
         }
     }

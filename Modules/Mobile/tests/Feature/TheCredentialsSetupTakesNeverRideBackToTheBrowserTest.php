@@ -135,7 +135,7 @@ it('sends the code to the update endpoint as a parameter, and reads back a body 
 
     $page = (string) $this->get(route('mobile.import'))->assertOk()->getContent();
 
-    expect($page)->not->toContain(SETUP_CREDENTIALS_PIN, 'the first render cannot carry a code nobody has typed');
+    expect(str_contains($page, SETUP_CREDENTIALS_PIN))->toBeFalse('the first render cannot carry a code nobody has typed');
 
     $rendered = LivewireRoundTrip::call($this, $page, 'mobile.import-bootstrap', 'submit', [
         'username' => 'phone-owner-round-trip',
