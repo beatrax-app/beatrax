@@ -55,6 +55,11 @@ $app = Application::configure(basePath: dirname(__DIR__))
         // Global, not group-scoped, so the header also covers non-web
         // responses such as the /health probe.
         $middleware->append(NoStoreFinancialData::class);
+        // Globally as well, because a routing exception is raised before the
+        // group runs and the error view reads the locale this binds: a 405
+        // never reaches the fallback route. No session and no user this early,
+        // so it decides on the header alone and the group's later pass wins.
+        $middleware->append(SetLocale::class);
         // `web`, not global: both read StartSession and the auth guard.
         // SetLocale goes first because EnsureDatabaseReady redirects a device
         // with no account, which left every pre-signup screen in English.
