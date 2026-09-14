@@ -235,10 +235,15 @@ jobs:
             - name: Larastan level 10 strict
               run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
 
+            # Serial, this died at test 2,728 of 17,667 with exit 2 and no
+            # summary -- a red job carrying no test output at all, which reads
+            # as infrastructure flake rather than a gate. Parallel is what
+            # ci.yml and coverage.yml already run, and with no --testsuite it
+            # takes every suite in one job rather than a shard's share.
             - name: Pest (full suite)
               env:
                   APP_ENV: testing
-              run: php artisan test
+              run: php artisan test --parallel
 
     build-macos:
         # macOS Intel (x64) is intentionally skipped from the
