@@ -305,6 +305,7 @@ jobs:
                   set -euo pipefail
                   php artisan key:generate --ansi
                   php artisan native:install --publish --no-interaction --force
+                  php scripts/nativephp_supply_pdf_page_size.php
 
             - name: Build the macOS bundle (arm64)
               env:
@@ -504,6 +505,7 @@ jobs:
                   set -euo pipefail
                   php artisan key:generate --ansi
                   php artisan native:install --publish --no-interaction --force
+                  php scripts/nativephp_supply_pdf_page_size.php
 
             - name: Build the Windows bundle
               shell: bash
@@ -705,6 +707,7 @@ jobs:
                   set -euo pipefail
                   php artisan key:generate --ansi
                   php artisan native:install --publish --no-interaction --force
+                  php scripts/nativephp_supply_pdf_page_size.php
 
             - name: Build the Linux bundle
               env:
