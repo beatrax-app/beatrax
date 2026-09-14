@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-// REPO-R29 asks that each platform bundle be smoke-tested -- launched and asked
-// for its health endpoint -- before upload. The release workflow verified
+// A platform bundle is smoke-tested by being launched and asked for its health
+// endpoint, before it is uploaded. The release workflow verified
 // signatures, read bundle contents and scanned Android's merged permissions,
 // and launched nothing: every one of those passes for a bundle that dies on
 // start. The workflow said so in a comment, claiming an Electron bundle cannot
@@ -43,9 +43,9 @@ it('launches the Linux bundle and asks it for health before uploading it', funct
     $smokeAt = strpos($workflow, LAUNCH_SCRIPT);
     expect($smokeAt)->not->toBeFalse('No step in the release workflow runs '.LAUNCH_SCRIPT.', so no bundle is launched before it is published.');
 
-    // "before upload" is the half of REPO-R29 a step in the wrong place loses:
-    // a bundle smoke-tested after upload has already been published when the
-    // test speaks.
+    // "before upload" is the half a step in the wrong place loses: a bundle
+    // smoke-tested after upload has already been published when the test
+    // speaks.
     $uploadAt = strpos($workflow, 'name: Upload Linux artifacts');
     expect($uploadAt)->not->toBeFalse('The Linux upload step was renamed, so this rule can no longer tell whether the smoke test runs before it.');
     expect($smokeAt)->toBeLessThan($uploadAt, 'The smoke test runs after the Linux upload, so a bundle that cannot start is published before anything asks it.');

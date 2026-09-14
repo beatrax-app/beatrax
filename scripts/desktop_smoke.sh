@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Release smoke test for a built desktop bundle. Launches what the build just
 # produced and asks it for /health, which is the only thing that proves the
-# bundle RUNS rather than merely being shaped right (REPO-R29, OPS-R5).
+# bundle RUNS rather than merely being shaped right.
 #
 # A signature check, a contents scan and a permission scan all pass for a
 # bundle that dies on launch: a missing runtime, an entitlement that blocks

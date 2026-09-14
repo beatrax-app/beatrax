@@ -815,9 +815,9 @@ jobs:
                       cat "$emitted"
                   done
 
-            # REPO-R29 asks that each bundle be smoke-tested — launched and
-            # asked for its health endpoint — before upload. The checks above
-            # prove the AppImage is SHAPED right; only launching proves it runs.
+            # The checks above prove the AppImage is SHAPED right. Only
+            # launching it proves it runs, which is why this sits before the
+            # upload rather than after it.
             # xvfb supplies the display Electron needs, and the AppImage is
             # extracted rather than FUSE-mounted, which a hosted runner cannot do.
             - name: Launch the AppImage and ask it for /health
