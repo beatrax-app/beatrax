@@ -214,7 +214,7 @@ it('writes only routing metadata when the mailbox itself stores a blob', functio
     // operator can query. Everything but the blob is routing metadata.
     unset($row['blob']);
     foreach ($row as $column => $value) {
-        expect((string) $value)->not->toContain('secret-note', sprintf('relay_mailbox.%s leaks blob content', $column));
+        expect(str_contains((string) $value, 'secret-note'))->toBeFalse(sprintf('relay_mailbox.%s leaks blob content', $column));
     }
 });
 

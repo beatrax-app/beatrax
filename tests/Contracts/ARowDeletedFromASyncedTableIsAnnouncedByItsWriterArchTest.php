@@ -146,7 +146,9 @@ it('reports a delete that leaves a travelling table unannounced', function (): v
         ->and(announcesADelete($discarded.' $events->dispatch($event);'))->toBeTrue();
 
     expect(tablesThatTravel())->toContain('notifications')
-        ->not->toContain('rule_conditions', 'rule_actions', 'categorization_rules');
+        ->not->toContain('rule_conditions')
+        ->not->toContain('rule_actions')
+        ->not->toContain('categorization_rules');
 
     // The walk has to reach both roots, and say so: this rule read no file of
     // app/ at all while claiming to hold the codebase.

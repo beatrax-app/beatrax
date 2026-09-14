@@ -323,7 +323,7 @@ it('enables the Artisan + Audit sidebar nav items (drops nav-disabled when dev.a
         $label = $matches[2][$i];
         $classes = $matches[1][$i];
         if (in_array($label, ['Artisan', 'Audit'], true)) {
-            expect($classes)->not->toContain('nav-disabled', sprintf("Sidebar entry '%s' should NOT have nav-disabled when its route is registered", $label));
+            expect(str_contains($classes, 'nav-disabled'))->toBeFalse(sprintf("Sidebar entry '%s' should NOT have nav-disabled when its route is registered", $label));
         }
     }
 });

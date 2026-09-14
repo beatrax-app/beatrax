@@ -60,7 +60,7 @@ it('ActualParser: parses the golden fixture into a populated MigrationBatch', fu
     // Transfer-account payees are never real payees.
     $payeeNames = $batch->payees->pluck('name')->all();
     expect($payeeNames)->toContain('Albert Heijn', 'Employer', 'Supermarket');
-    expect($payeeNames)->not->toContain('Transfer: Savings', 'Transfer: Checking');
+    expect($payeeNames)->not->toContain('Transfer: Savings')->not->toContain('Transfer: Checking');
 
     // 2 months x 2 budgeted categories = 4 assignment rows.
     expect($batch->budgetAssignments)->toHaveCount(4);

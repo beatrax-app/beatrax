@@ -67,8 +67,8 @@ it('has a denominator to read a verdict from', function (): void {
         ->and($order->parentColumns('transactions'))
         ->toHaveKeys(['account_id', 'category_id', 'counterparty_id'], 'the walk cannot see the references it is about');
 
-    expect(untranslatedIdColumns($connection, $order, $registry))
-        ->not->toContain('transactions.account_id', 'a constrained reference reads as untranslated, so every verdict here is noise');
+    expect(in_array('transactions.account_id', untranslatedIdColumns($connection, $order, $registry), true))
+        ->toBeFalse('a constrained reference reads as untranslated, so every verdict here is noise');
 });
 
 it('translates every id a peer mints, or says what the column holds instead', function (): void {

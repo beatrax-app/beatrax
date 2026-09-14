@@ -69,7 +69,7 @@ it('declares a parity pair for exactly the matchers that have a twin ingestion f
     expect(array_map(
         static fn (SourceFormat $format): string => $format->value,
         SourceFormat::cases(),
-    ))->not->toContain('google-play-csv', 'google-play-pdf');
+    ))->not->toContain('google-play-csv')->not->toContain('google-play-pdf');
 });
 
 it('produces equivalent fingerprints from receipt and CSV for the same logical transaction', function (

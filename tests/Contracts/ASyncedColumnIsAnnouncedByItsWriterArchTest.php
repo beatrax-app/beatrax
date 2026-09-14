@@ -193,7 +193,10 @@ it('has a denominator to read a verdict from', function (): void {
     // The tables whose columns most often move after the create. A scan that
     // lost them would report a clean tree in the same words a clean one does.
     expect(array_keys($tables))->toContain('transactions', 'accounts', 'goals')
-        ->not->toContain('users', 'categorization_rules', 'rule_conditions', 'rule_actions');
+        ->not->toContain('users')
+        ->not->toContain('categorization_rules')
+        ->not->toContain('rule_conditions')
+        ->not->toContain('rule_actions');
 
     expect(RepoTree::accountOf(RepoTree::RUNTIME_DOMAIN_PHP))->toBe(
         ['unaccounted' => [], 'stale' => [], 'silent' => []],
