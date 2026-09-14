@@ -247,6 +247,48 @@ it('gives every identity an expiry in a shape that can be read', function (): vo
     ]));
 });
 
+// The shape check above accepts any well-formed date, including one that
+// passed months ago. This page opens by saying "Nothing warns. Read this
+// page before a release." -- this is that warning, so the sentence stops
+// resting on somebody remembering to read it.
+it('carries no identity whose recorded expiry has already passed', function (): void {
+    $today = date('Y-m-d');
+    $lapsed = [];
+    $runway = [];
+
+    foreach (sirRegisterRows() as $row) {
+        if (! PatternScan::matches('/^\d{4}-\d{2}-\d{2}$/', $row['expires'])) {
+            continue;
+        }
+
+        // Compared as strings, not dates: both sides are zero-padded ISO of
+        // the same width, so lexical order is chronological order. A row
+        // expiring today is still valid today, so the boundary is strict.
+        if ($row['expires'] < $today) {
+            $lapsed[] = $row['identity'].' expired '.$row['expires'];
+
+            continue;
+        }
+
+        $runway[] = $row['expires'].'  '.$row['identity'];
+    }
+
+    sort($runway);
+
+    expect($lapsed)->toBe([], implode("\n", [
+        'These identities lapsed while the register still lists them:',
+        ...array_map(static fn (string $line): string => '  - '.$line, $lapsed),
+        '',
+        'A lapsed credential does not announce itself at build time. An empty',
+        'Azure value drops azureSignOptions and ships an unsigned installer from',
+        'a green build, and the macOS prebuild hook exits into a runProcess()',
+        'that swallows it. Renew the identity first, then update its row.',
+        '',
+        'The dates still ahead, soonest first:',
+        ...array_map(static fn (string $line): string => '  '.$line, $runway),
+    ]));
+});
+
 it('is the only page in the tree carrying these dates', function (): void {
     $dates = [];
 
