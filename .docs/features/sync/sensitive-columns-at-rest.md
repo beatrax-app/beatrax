@@ -702,6 +702,43 @@ A peer running a build older than the fix can also still send a `merged_from` en
 applier: the two devices in a household upgrade together, the migration runs on each, and adding
 a per-key strip to the applier would be a shape check on one key of one JSON column.
 
+### A shadow on a table the guard could not reach
+
+The fold above was found because `counterparties` is a table the registry already classifies, so
+the guard that holds a registered table to its whole surface was looking at it. Two more shadows
+stood on tables it could not reach, and for two different reasons.
+
+`pending_enrichment_conflicts.stored_value` holds the decrypted `transactions.counterparty_name`
+or `description` a receipt disagrees about, so the prompt shows what the ledger holds rather than
+base64; `incoming_value` holds the receipt's own value for that field. This one was **not**
+undocumented: *The knowingly-accepted exceptions* below has carried it all along. It was missing
+from `knowinglyPlaintext()` — which is the docs-yes/registry-no half that same section says it
+closed, standing unnoticed inside the paragraph that says so. Measured on an enrolled install: one
+row held a description in the clear while the column it was taken from read back as base64.
+
+`migration_staging_unmapped_items` was on neither, and carries the same shape three columns wide. `local_value` is the
+decrypted `transactions.description` a reconcile found changed on both sides, `source_value` is the
+export's value for it, and `baseline_value` is what both are compared against — the role
+`migration_import_baseline.baseline_value` plays, and that column is on `knowinglyPlaintext()` for
+it while its sibling was on no list at all. `reason` then holds all three a second time:
+`StoredCopy::of()` json-encodes the copy spec **and** the rendered sentence, and the spec's
+parameters are those three values.
+
+Two things hid them, and neither is that nobody looked. The shadow is made across two files in both
+cases — `FingerprintStage` opens the row and `ApplyEnrichments` writes the opened value;
+`ThreeWayMergeResolver` opens and `CheckForUpdates` writes — so
+`ADecryptedValueLandsOnlyWhereItMayArchTest`, which pins files that open AND write, sees neither
+half alone. And `ARegisteredTableIsRegisteredWholeTest` built its walk from the three registry
+lists, so a table on none of them was never inspected by the guard whose whole purpose is finding
+the column nobody classified. Thirty-nine tables sit in that blind spot today.
+
+The two receipt columns are on `knowinglyPlaintext()` now, which is where a decided exception
+belongs and what closes the asymmetry for real. The four migration columns are open work instead:
+nothing has decided them, and AEAD can apply — `knowinglyPlaintext()` means it cannot, so they may
+not go there. Naming a column in the guard's open map now registers its table, which is what holds
+that table whole. `reason` joined the token list for the same reason it was missing from it: no
+token matched that column name, and it carries the most complete copy of the three.
+
 ## Why money columns are not on the list
 
 `transactions.amount_minor`, `settled_amount_minor` and `fx_rate_used` are deliberately
@@ -728,8 +765,8 @@ bearing:
 
 ## The knowingly-accepted exceptions
 
-Two columns hold decrypted values on purpose. Each is a reviewed decision, not an
-oversight:
+Three columns, in two groups, hold decrypted values on purpose. Each is a reviewed
+decision, not an oversight:
 
 - **`migration_import_baseline.baseline_value`** snapshots a plaintext value so the
   three-way merge resolver can compare against it. A baseline that read back as different
@@ -741,7 +778,10 @@ oversight:
   which was argued in the registry and absent from the page. Both directions are now closed.
 - **`pending_enrichment_conflicts.stored_value` / `.incoming_value`** hold decrypted values
   of a held receipt-enrichment conflict until the user resolves the prompt, so the prompt
-  never renders ciphertext.
+  never renders ciphertext. This bullet is older than the registry entry beside it: the pair
+  was argued here and absent from `knowinglyPlaintext()` until *A shadow on a table the guard
+  could not reach* above went looking, which is the third time that asymmetry has been found
+  and the first time it was found inside the section claiming to have closed it.
 
 Deferred rather than decided: `counterparties.metadata` and `saved_reports.definition`.
 
@@ -1375,8 +1415,16 @@ string two lines down in the same migration is exactly what that check cannot se
 `columns()`, `knowinglyPlaintext()` or `blindIndexColumns()`, the registry owns the whole
 table: every remaining column of it whose name is content-shaped — one carrying `name`, `note`,
 `description`, `subject`, `label`, `email`, `iban`, `pattern`, `sender`, `payee`, `memo`,
-`title`, `body`, `address`, `filename` — must be classified in one of the three lists too, or
-named in the guard's own reviewed-and-structural set with a reason.
+`title`, `body`, `address`, `filename`, `file_name`, `value` or `reason` — must be classified in
+one of the three lists too, or named in the guard's own reviewed-and-structural set with a
+reason.
+
+The word carrying the weight there is **any**, and for a long time it was also the hole: a table
+with *none* was owned by nobody, and the walk never opened it. That is how the two shadows in
+*A shadow on a table the guard could not reach* stood. Naming a column in the guard's open map
+registers its table now, so a table can be brought under the rule by recording open work on it
+rather than by claiming a blocker it does not have. Thirty-nine tables still carry
+content-shaped columns and sit on no list at all.
 
 It is deliberately not run over every table in the schema. That check is expressible and would
 be red on its first run against a hundred tables nobody has assessed, and a guard whose baseline
