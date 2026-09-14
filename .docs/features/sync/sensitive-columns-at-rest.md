@@ -643,6 +643,48 @@ snapshot, or an SSD's own remapped blocks. Anyone who had read access to the fil
 was in the clear still has what they read. The pass converts what the ledger will hand out from
 now on, and that is all it claims.
 
+### What the residue sweep cannot see
+
+It re-seals plaintext found **in a sealed column**. Its projection is
+`PreMigrationSnapshot::PROJECTION_COLUMNS` — the registry's own list — so a sealed value copied
+into a column that is *not* on that list is not something it can look at. Its own comment says
+so: a writer that bypasses the codec changes nothing the digest can see.
+
+That is not hypothetical. `MergeCounterparties` recorded what a fold absorbed as
+`counterparties.metadata.merged_from[].name`, taken from the absorbed row's sealed
+`display_name` after decrypting it. `metadata` is on no list, so the name sat in the clear one
+column over — and the same fold deletes the absorbed row, so the cleartext copy outlived the
+column it was sealed in. The `institution_iban` migration had already cleared that shape out of
+this same column once.
+
+It also defeated the bound that makes a shadow acceptable. `counterparties.slug` is disclosed
+*because* `CounterpartySlugResolver` answers `OPAQUE_BASE` for a name that spells an account
+number, so an IBAN-named row slugs to `unnamed`. `merged_from[].name` carried the same name with
+no such bound: measured, the absorbed row's slug was `unnamed` while the survivor's metadata
+held the account number.
+
+So the discriminator for any decrypt-then-write is **is the destination sealed, or disclosed
+here with the reason AEAD does not apply to it?** B4-R26 allows a plaintext shadow only where it
+is disclosed. `merchants.name` receives a decrypted `transactions.counterparty_name` and is fine
+*because* it is disclosed. `counterparties.metadata` was neither.
+
+`ADecryptedValueLandsOnlyWhereItMayArchTest` pins every production file that both opens a sealed
+value and writes to the database, each with where the opened value lands. Twelve today.
+
+The op log keeps its own copy, and the migration does not reach it. Entries are per field, and
+`metadata` is not a sealed column, so a `metadata` entry is stored in the clear beside the sealed
+`display_name` ones — measured on this install, `display_name` entries carry a `gdk_epoch` and
+base64 ciphertext while `metadata` and `slug` entries carry neither. Nor should the migration
+reach it: entries are signed, so rewriting a value in place makes one `OpLogEntryVerifier`
+quarantines, and deleting it removes history a peer replays. This is the same bound as *What
+re-sealing does not fix* above — the repair converts what the ledger hands out from now on, and
+that is all it claims.
+
+A peer running a build older than the fix can also still send a `merged_from` entry carrying
+`name`, and the map merges per key, so the entry would land. Nothing defends against that at the
+applier: the two devices in a household upgrade together, the migration runs on each, and adding
+a per-key strip to the applier would be a shape check on one key of one JSON column.
+
 ## Why money columns are not on the list
 
 `transactions.amount_minor`, `settled_amount_minor` and `fx_rate_used` are deliberately
