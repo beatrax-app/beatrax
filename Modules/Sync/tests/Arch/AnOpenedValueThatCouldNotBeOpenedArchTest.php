@@ -21,6 +21,8 @@ const A_DECRYPT_WHOSE_VALUE_REACHES_A_SINK = [
     'Modules/Chains/Internal/Resolvers/PaypalFundingResolver.php' => 'opened to parse the event row and to match an alias. What reaches chain_links.evidence is the funding ACCOUNT IBAN, and the link is refused unless accountIdForIban() resolves one.',
     'Modules/Counterparties/Internal/Actions/LabelCounterparty.php' => 'UnopenedValue: the name is announced only when it was read, because a peer that CAN read it would apply the blank over its own good copy.',
     'Modules/Counterparties/Internal/Actions/MergeCounterparties.php' => 'opened only to compare the survivor s name against the merged one. What is written is the merged name the caller supplied, never the opened value.',
+    'Modules/Counterparties/Database/Seeders/Demo/DemoCounterpartiesSeeder.php' => 'reopens rows it sealed itself moments earlier, so it holds the key by construction and a blank cannot arise. Nothing it opens is written back either -- the opened values rebuild a CanonicalTransaction the resolver reads.',
+    'Modules/Counterparties/Internal/Resolver/CounterpartyResolverService.php' => 'decryptRow, so a blank arrives named -- DecryptedRow::isUnreadable() carries it. refreshStored() is the only place an opened value is written back, and a blank cannot reach it: resolveUnique() compares the opened stored name first, a blank fails that comparison, the slug is suffixed and firstOrCreate() mints a rival row instead. Here the blank costs a duplicate counterparty rather than an overwrite, which CounterpartySlugResolver records at slugIsFreeFor().',
     'Modules/Ledger/Internal/Http/Livewire/Concerns/ManagesSplitEditor.php' => 'the loader. It puts the opened note in the editor, where a blank looks like an empty box; SaveTransactionSplit decides what survives the post back, so the bound is at the writer and holds for every caller.',
     'Modules/Ledger/Internal/Http/Livewire/TransactionDetail.php' => 'opened for the page it renders. Its note field posts a reader-initiated `set`, which is a decision about what an empty box should mean rather than a correctness bound, and is recorded as an open question rather than answered here.',
     'Modules/Ledger/Internal/Services/StripAsnDescriptionDelimiters.php' => 'skips the row where a non-empty stored value opened to empty, so it never writes the unwrap of a blank back over a sealed description.',
@@ -29,7 +31,7 @@ const A_DECRYPT_WHOSE_VALUE_REACHES_A_SINK = [
     'Modules/Recurring/Internal/Detectors/IncomeSeriesDetector.php' => 'the opened IBAN becomes a grouping key, not a stored value: CounterpartyKey answers its NONE sentinel for an empty one and the caller turns that into null.',
 ];
 
-const AN_OPENING_CALL = '/->\s*(?:decryptValue|decryptAttrs)\s*\(/';
+const AN_OPENING_CALL = '/->\s*(?:decryptValue|decryptRow)\s*\(/';
 
 // A write, or an announcement a peer applies. Both are sinks: OpLogWriter seals
 // a sensitive column on the way out, so an announced blank lands on the peer as

@@ -135,8 +135,10 @@ final readonly class CounterpartySlugResolver
         return is_string($storedName) && $this->decryptDisplayName($storedName, $userId) === $displayName;
     }
 
-    // Never throws: an undecryptable value comes back as raw ciphertext,
-    // which fails the identity comparison and falls through to suffixing.
+    // Never throws. The codec answers '' for bytes no epoch here opened, not
+    // the ciphertext this once said, and a blank fails the identity comparison
+    // the same way: the caller suffixes and mints a rival row. A device that
+    // cannot read a name cannot recognise it either.
     private function decryptDisplayName(string $stored, int $userId): string
     {
         return $this->codec->decryptValue('counterparties', 'display_name', $stored, $userId, ($this->session)())['value'];
