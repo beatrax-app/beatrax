@@ -19,6 +19,14 @@
       "runs_in": "quality shard",
       "why": "Gated on the `mobile.recovery-codes.export` route. Modules/Mobile/Routes/web.php registers it unconditionally and the Mobile module is enabled in both roots, so the gate is answered everywhere and these never actually skip."
     },
+    "Modules/Core/tests/Feature/Bootstrap/AppKeyRegenerationTest.php": {
+      "markers": 2,
+      "skipped": {
+        "quality shard": 0
+      },
+      "runs_in": "quality shard",
+      "why": "Gated on not being root, for the same reason as the two Receipts entries below: both cases work by taking write permission off a directory, and root ignores that. The GitHub runner executes steps as the unprivileged `runner` user, so neither skips there."
+    },
     "Modules/Core/tests/Feature/EncryptedBackupRestoreTest.php": {
       "markers": 1,
       "skipped": {

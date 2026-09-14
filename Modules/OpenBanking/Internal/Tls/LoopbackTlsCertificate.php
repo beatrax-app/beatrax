@@ -190,7 +190,13 @@ final readonly class LoopbackTlsCertificate
         DNS.2 = 127.0.0.1
         CONF;
 
-        file_put_contents($path, $config);
+        // Suppressed so the `=== false` check decides, the way the PEM writes
+        // above do it: openssl reads this file back to learn that the cert
+        // needs a 127.0.0.1 SAN, so a write that did not land produces a
+        // certificate the loopback listener cannot be reached on.
+        if (@file_put_contents($path, $config) === false) {
+            throw LoopbackTlsException::couldNotCreateConfig();
+        }
 
         return $path;
     }

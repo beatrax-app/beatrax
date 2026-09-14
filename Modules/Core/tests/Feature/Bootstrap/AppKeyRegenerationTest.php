@@ -279,3 +279,101 @@ it('leaves the shipped key in place, and says so, when the file cannot be writte
 
     chmod($this->envFile, 0o644);
 });
+
+// The inverse of the case above, and the worse one: the rotation lands and the
+// record of it does not. Every launch then reads "not yet rotated", rotates
+// again, and throws away everything the previous key encrypted.
+it('does not rotate a second time when the sentinel could not be written', function (): void {
+    if (posix_geteuid() === 0) {
+        $this->markTestSkipped('root bypasses directory write permissions.');
+    }
+
+    $paths = $this->app->make(UserDataPathService::class);
+    $kernel = ensureAppKeySpyKernel();
+
+    // A spy that really rotates: the key reaches the file, so the only thing
+    // that can go wrong afterwards is the stamp.
+    $kernel->onCall = function (): void {
+        file_put_contents($this->envFile, sprintf(
+            "APP_NAME=Beatrax\nAPP_KEY=%s\n",
+            'base64:'.base64_encode(random_bytes(32)),
+        ));
+    };
+
+    // The marker's own directory, PRESENT and admitting no new entries. It has
+    // to exist: appPath() is NATIVEPHP_STORAGE_PATH/app, which the fixture does
+    // not create, so locking the root above it exercises the mkdir arm instead
+    // and this case passes while testing the wrong refusal.
+    $markerDir = dirname(UserDataPathService::appPath('first-launch.app-key-generated'));
+    mkdir($markerDir, 0o700, true);
+    chmod($markerDir, 0o500);
+
+    $logger = new class extends AbstractLogger
+    {
+        /** @var list<string> */
+        public array $errors = [];
+
+        public function log($level, $message, array $context = []): void
+        {
+            if ($level === 'error') {
+                $this->errors[] = (string) $message;
+            }
+        }
+    };
+
+    $action = new EnsureAppKey($paths, $kernel, $logger, $this->envFile);
+    @$action->run();
+    $afterFirst = appKeyWrittenIn($this->envFile);
+    @$action->run();
+    $afterSecond = appKeyWrittenIn($this->envFile);
+
+    chmod($markerDir, 0o700);
+
+    // The message is asserted because the directory refusal above logs too, and
+    // "some error" cannot tell the two arms apart.
+    expect($logger->errors)->toHaveCount(2)
+        ->and($logger->errors[0])->toContain('first-launch marker could not be written')
+        ->and(file_exists(UserDataPathService::appPath('first-launch.app-key-generated')))->toBeFalse()
+        ->and($afterSecond)->toBe($afterFirst)
+        ->and($afterSecond)->toBe($this->shippedKey);
+});
+
+// The other half of claiming first: if the marker cannot even have a directory
+// to live in, nothing is rotated, because a rotation nobody can record is the
+// one that repeats itself on every launch.
+it('leaves the shipped key alone when the marker has nowhere to live', function (): void {
+    if (posix_geteuid() === 0) {
+        $this->markTestSkipped('root bypasses directory write permissions.');
+    }
+
+    $locked = $this->tempRoot.DIRECTORY_SEPARATOR.'locked';
+    mkdir($locked, 0o500, true);
+    putenv('NATIVEPHP_STORAGE_PATH='.$locked.DIRECTORY_SEPARATOR.'data');
+
+    $kernel = ensureAppKeySpyKernel();
+
+    $logger = new class extends AbstractLogger
+    {
+        /** @var list<string> */
+        public array $errors = [];
+
+        public function log($level, $message, array $context = []): void
+        {
+            if ($level === 'error') {
+                $this->errors[] = (string) $message;
+            }
+        }
+    };
+
+    $action = new EnsureAppKey($this->app->make(UserDataPathService::class), $kernel, $logger, $this->envFile);
+    @$action->run();
+
+    chmod($locked, 0o700);
+
+    // Named, not merely counted: the marker-write refusal below logs too, and
+    // an assertion on "some error" cannot tell the two arms apart.
+    expect($kernel->calls)->toBe([])
+        ->and($logger->errors)->toHaveCount(1)
+        ->and($logger->errors[0])->toContain('directory holding the first-launch marker')
+        ->and(appKeyWrittenIn($this->envFile))->toBe($this->shippedKey);
+});
