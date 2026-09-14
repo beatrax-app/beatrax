@@ -434,6 +434,25 @@ jobs:
                       cat "$emitted"
                   done
 
+            # The probe removed in 8dd6811d4 used `open -a`, which goes through
+            # LaunchServices and Gatekeeper -- the ad-hoc-signing friction that
+            # commit recorded. Executing the bundle's own binary skips both and
+            # still launches what ships: this .app is the signed one the dmg is
+            # packed from, and the two steps above already read it.
+            - name: Launch the .app and ask it for /health
+              env:
+                  REF_NAME: ${{ github.ref_name }}
+              run: |
+                  set -euo pipefail
+                  APP=$(find nativephp/electron/dist -maxdepth 2 -name '*.app' -print -quit)
+                  [ -n "$APP" ] || { echo "::error::No .app under nativephp/electron/dist to smoke-test."; exit 1; }
+                  # CFBundleExecutable rather than the first file in Contents/MacOS:
+                  # a bundle may legitimately carry a relocated interpreter beside its
+                  # binary, and only the plist says which one macOS would launch.
+                  EXEC=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Contents/Info.plist")
+                  [ -x "$APP/Contents/MacOS/$EXEC" ] || { echo "::error::${APP} names ${EXEC} as its executable and does not carry it."; exit 1; }
+                  scripts/desktop_smoke.sh "${REF_NAME#v}" "$APP/Contents/MacOS/$EXEC"
+
             - name: Upload macOS artifacts (arm64)
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
               with:
@@ -643,6 +662,31 @@ jobs:
                       echo "--- ${emitted} ---"
                       cat "$emitted"
                   done
+
+            # The probe removed in 8dd6811d4 installed the NSIS package and then
+            # launched what it installed, which is where that commit's timing
+            # trouble lived. The unpacked tree holds the same binaries the
+            # installer lays down -- the signature walk above reads exactly this
+            # tree -- so launching it drops the installer from the path without
+            # dropping what is under test.
+            - name: Launch the unpacked package and ask it for /health
+              shell: bash
+              env:
+                  REF_NAME: ${{ github.ref_name }}
+              run: |
+                  set -euo pipefail
+                  ROOT=$(find nativephp/electron/dist -maxdepth 1 -type d -name '*unpacked*' -print -quit)
+                  [ -n "$ROOT" ] || { echo "::error::No *unpacked* directory under nativephp/electron/dist to smoke-test."; exit 1; }
+                  # Exactly one, rather than the first `find` happens to return: if a
+                  # build ever puts a second executable at the root, this says so
+                  # instead of silently smoke-testing whichever one came back first.
+                  mapfile -t EXES < <(find "$ROOT" -maxdepth 1 -type f -name '*.exe')
+                  if [ "${#EXES[@]}" -ne 1 ]; then
+                      echo "::error::${ROOT} carries ${#EXES[@]} executables at its root; expected exactly one to launch."
+                      printf '::error::  %s\n' "${EXES[@]}"
+                      exit 1
+                  fi
+                  scripts/desktop_smoke.sh "${REF_NAME#v}" "${EXES[0]}"
 
             - name: Upload Windows artifacts
               uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1

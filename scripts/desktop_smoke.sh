@@ -26,6 +26,21 @@ DEADLINE=$((SECONDS + 180))
 
 fail() { echo "SMOKE FAIL: $*" >&2; exit 1; }
 
+# Git Bash on a Windows runner has no `python3` on PATH -- the interpreter is
+# `python` there. Resolving it rather than naming it keeps one script across
+# the three runners, and a runner carrying neither says so instead of failing
+# later inside a heredoc.
+PYTHON="${SMOKE_PYTHON:-}"
+if [ -z "$PYTHON" ]; then
+    for candidate in python3 python; do
+        if command -v "$candidate" >/dev/null 2>&1; then
+            PYTHON="$candidate"
+            break
+        fi
+    done
+fi
+[ -n "$PYTHON" ] || fail "no python interpreter on PATH to read the /health body with"
+
 APP_PID=""
 cleanup() {
     if [ -n "$APP_PID" ] && kill -0 "$APP_PID" 2>/dev/null; then
@@ -77,7 +92,7 @@ fi
 
 echo "    $BODY"
 
-BODY="$BODY" EXPECTED_VERSION="$EXPECTED_VERSION" python3 <<'PY'
+BODY="$BODY" EXPECTED_VERSION="$EXPECTED_VERSION" "$PYTHON" <<'PY'
 import json, os, sys
 
 body = json.loads(os.environ["BODY"])
