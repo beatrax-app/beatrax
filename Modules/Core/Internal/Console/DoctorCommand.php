@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Core\Internal\Console;
 
 use Illuminate\Console\Command;
+use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Modules\Core\Internal\Console\Probes\BackgroundScheduleProbe;
 use Modules\Core\Internal\Console\Probes\BackupFreshnessProbe;
 use Modules\Core\Internal\Console\Probes\ComposerVersionProbe;
@@ -49,6 +50,7 @@ final class DoctorCommand extends Command
         private readonly HostTimezoneProbe $hostTimezoneProbe,
         private readonly OwnerBoundaryProbe $ownerBoundaryProbe,
         private readonly SchemaShapeHealthCheck $schemaShapeHealth,
+        private readonly ConfigRepository $config,
         private readonly ?FtsHealthCheck $ftsHealth = null,
         private readonly ?FingerprintHealthCheck $fingerprintHealth = null,
         private readonly ?SplitSumHealthCheck $splitSumHealth = null,
@@ -67,6 +69,7 @@ final class DoctorCommand extends Command
 
         $this->line('beatrax:doctor');
         $this->line('-----------------');
+        $this->line(sprintf(self::ROW_FORMAT, 'reading', '', $this->inspectedDatabase()));
 
         // Every check runs through the same Probe -> ProbeResult ->
         // reportProbe pipeline so the output table is homogeneous and
@@ -131,6 +134,27 @@ final class DoctorCommand extends Command
         $this->info('All checks passed.');
 
         return self::SUCCESS;
+    }
+
+    // Every database-derived row below describes whichever file the default
+    // connection resolves to, and this checkout holds two: artisan opens
+    // database.sqlite while the desktop runs on nativephp.sqlite. Unnamed,
+    // a report on the stale one reads exactly like one on the running app.
+    private function inspectedDatabase(): string
+    {
+        $default = $this->config->get('database.default');
+
+        if (! is_string($default) || $default === '') {
+            return 'unknown';
+        }
+
+        $database = $this->config->get('database.connections.'.$default.'.database');
+
+        if (! is_string($database) || $database === '') {
+            return $default;
+        }
+
+        return $default.': '.$database;
     }
 
     /**

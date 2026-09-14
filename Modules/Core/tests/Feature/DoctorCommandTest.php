@@ -128,3 +128,19 @@ it('prints the row counting what the op log holds and the tables do not', functi
     $this->artisan('beatrax:doctor')
         ->expectsOutputToContain('rows the log still holds');
 });
+
+it('names the database whose state its rows describe', function (): void {
+    // This checkout holds two: artisan opens database.sqlite while the desktop
+    // runs on nativephp.sqlite, so a WAL or quarantine row is ambiguous until
+    // the file is named. Read back from config rather than hardcoded, because
+    // a fixed literal would satisfy the assertion without reading anything.
+    $default = (string) config('database.default');
+    $database = (string) config('database.connections.'.$default.'.database');
+
+    expect($database)->not->toBe('', 'The test environment has no database path to print.');
+
+    // One expectation, not two: expectsOutputToContain consumes a line per
+    // call, so a second one can never match the line the first just took.
+    $this->artisan('beatrax:doctor')
+        ->expectsOutputToContain($default.': '.$database);
+});
