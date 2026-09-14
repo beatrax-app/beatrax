@@ -30,10 +30,18 @@ electron-updater manifest and a detached hex signature sibling:
 |---|---|---|
 | Windows | `latest.yml` | `beta.yml` |
 | macOS | `latest-mac.yml` | `beta-mac.yml` |
-| Linux | `latest-linux.yml` | `beta-linux.yml` |
+| Linux (x64) | `latest-linux.yml` | `beta-linux.yml` |
+| Linux (arm64) | `latest-linux-arm64.yml` | `beta-linux-arm64.yml` |
 
 Each carries a detached hex signature beside it under the same name plus
-`.sig`, and every one of the six is signed by the one key.
+`.sig`, and every one of the eight is signed by the one key.
+
+Linux is the one platform with a row per architecture, because it is the
+one that ships an AppImage per architecture. electron-updater appends
+`-${arch}` for anything that is not x64, so a single `latest-linux.yml`
+is read by an x64 and an arm64 desktop alike — which is how an arm64
+AppImage came to be offered to x86_64 machines until the name carried
+its architecture.
 
 Those three rows are the cases of `Modules\Core\Internal\Enums\OsFamily`, and
 `updateManifestSuffix()` is the whole mapping — Windows' empty suffix is its own
@@ -154,8 +162,9 @@ waited through a download, and would otherwise be told nothing at all — which
 reads as "it worked" and invites the same click again.
 
 **Known gap — a `.deb` install is offered an update it cannot apply.** The Linux
-job publishes both an AppImage and a `.deb`, and `latest-linux.yml` describes
-**the AppImage**: its path and its digest. electron-updater's Linux support
+job publishes an AppImage and a `.deb` per architecture, and each Linux
+manifest describes **the AppImage** for its architecture: its path and its
+digest. electron-updater's Linux support
 only replaces an AppImage in place. A reader who installed the `.deb` therefore
 polls a manifest that resolves, is offered an install, consents, downloads an
 artefact that verifies — and then `quitAndInstall()` has nothing it can do.
