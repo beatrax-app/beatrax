@@ -1403,6 +1403,36 @@ right — a substring search over random-nonce ciphertext returns nothing, which
 reason than the one written down — but a reason nobody re-checks decays, and a wrong reason on
 a correct decision is how the next reader is talked out of the correct decision.
 
+`community_merchant_mappings` joins them from a seventh direction, and it is the one this page
+had already looked straight at. Four of its columns are on the register now:
+
+- **`pattern`** carries a partial UNIQUE over the global tier plus `unique(user_id, pattern)`,
+  and `ContributionLog` upserts on the latter, so ciphertext would file every correction as a
+  second suggestion rather than as one corrected. It is also a verbatim copy of the sealed
+  `transactions.description`: `UncategorizedTriageQuery` decrypts the description, the triage
+  row dispatches it into `SuggestMappingModal`, and that writes it here. Measured on an enrolled
+  install, the reader's three suggestion rows hold bank descriptions in the clear —
+  `STG TUINBOUW NL`, `PYPL *EZPORT BV` — beside a `transactions.description` that reads back as
+  base64.
+- **`generalized_pattern`** is the normalised form of the same string and the needle
+  `CommunityCorpusQuery` loads its lookup from, behind a live
+  `where('generalized_pattern', '!=', '')`. It is the half that would have been left readable
+  had only `pattern` been sealed, which is `recurring_series.display_name_override`'s shape
+  exactly.
+- **`name`** and **`support_email`** are unsealable for the `categories.slug` reason: 7,060 of
+  the 7,063 rows are the shipped global tier carrying `user_id IS NULL`, and the codec keys on a
+  user, so there is no key to seal them under. `support_email` is shipped reference data about a
+  business rather than anything the reader wrote — 141 global rows carry one and no user row
+  does.
+
+What makes this the sharpest entry in the section is that the column was not missed for want of
+looking. The `merchant_aliases.generalized_pattern` bullet above names `community_merchant_mappings`
+**by name**, in a parenthetical explaining that a live `where('generalized_pattern', '!=', '')`
+belongs to *"a different table with its own column"* and should not be read as a hit for
+`merchant_aliases`. The table was seen, the predicate was traced to it, and the sentence ended
+there. A reviewer checking a column checks the column in front of them; a reviewer **clearing** a
+column checks only that the hit belongs elsewhere, and never that elsewhere is covered.
+
 ### Why the check has to be per table, not per column
 
 Both misses in that pass have one shape, and it is not "nobody looked". It is **one column of
