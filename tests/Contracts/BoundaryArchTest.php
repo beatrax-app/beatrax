@@ -673,6 +673,24 @@ const TRANSACTION_STATUS_ARRIVING_WRITER = [
     'declares' => "/'transactions' => \\[.*?'status' => \\['nullable' => false\\]/s",
 ];
 
+// The same question asked of the container instead of the helper, in one place
+// because the guard and the case that proves it each held a copy of this
+// literal — a self-test reading its own copy cannot see the guard's drift.
+function boundaryContainerPathPattern(): string
+{
+    return '/(?:\$app|\$this->app|\$this->laravel|\$this->container|\$container'
+        .'|getLaravel\(\)|app\(\)|App::|Container::getInstance\(\))\s*(?:->|::)?\s*'
+        .'(?:storagePath|databasePath)\s*\(/';
+}
+
+// The path reached through something that is not the container at all: the
+// Storage facade answers for a disk the shell may not have retargeted, and
+// reading filesystems config is the same answer one indirection further out.
+function boundaryStorageIndirectionPattern(): string
+{
+    return '/Storage::\s*(?:disk\s*\([^)]*\)\s*->\s*)?path\s*\(|config\(\s*[\'"]filesystems/';
+}
+
 /** @return list<string> every production PHP file this rule reads */
 function transactionStatusScannedFiles(): array
 {
@@ -1017,8 +1035,8 @@ it('does not allow raw path helpers or hard-coded storage literals outside UserD
     // somewhere UserDataLocations — the deletion procedure and the export —
     // does not look, because on iOS the shell announces a storage root that is
     // not the durable store.
-    $bannedContainerPaths = '/(?:\$app|\$this->app|\$this->laravel|getLaravel\(\)|app\(\)|App::)\s*(?:->|::)?\s*'
-        .'(?:storagePath|databasePath)\s*\(/';
+    $bannedContainerPaths = boundaryContainerPathPattern();
+    $bannedIndirection = boundaryStorageIndirectionPattern();
 
     $hits = [];
     $scanned = 0;
@@ -1050,6 +1068,7 @@ it('does not allow raw path helpers or hard-coded storage literals outside UserD
             $stripped = preg_replace('#/\*.*?\*/|//[^\n]*|\{\{--.*?--\}\}#s', '', $contents) ?? $contents;
             if (preg_match($bannedHelpers, $stripped) === 1
                 || preg_match($bannedContainerPaths, $stripped) === 1
+                || preg_match($bannedIndirection, $stripped) === 1
                 || (! $isBlade && preg_match($bannedLiterals, $stripped) === 1)) {
                 $hits[] = $relative;
             }
@@ -1072,8 +1091,7 @@ it('does not allow raw path helpers or hard-coded storage literals outside UserD
 // controls below are the two directions: every way to reach the Application is
 // caught, and a method merely NAMED like one is not.
 it('reads the container spelling of a path helper in every form, and leaves the path service alone', function (): void {
-    $pattern = '/(?:\$app|\$this->app|\$this->laravel|getLaravel\(\)|app\(\)|App::)\s*(?:->|::)?\s*'
-        .'(?:storagePath|databasePath)\s*\(/';
+    $pattern = boundaryContainerPathPattern();
 
     $caught = [
         '<?php $app->storagePath("app/inbox");',
@@ -1082,6 +1100,9 @@ it('reads the container spelling of a path helper in every form, and leaves the 
         '<?php $this->getLaravel()->storagePath();',
         '<?php app()->storagePath();',
         '<?php App::storagePath();',
+        '<?php Container::getInstance()->storagePath();',
+        '<?php $container->databasePath();',
+        '<?php $this->container->storagePath();',
     ];
 
     foreach ($caught as $source) {
@@ -1096,6 +1117,37 @@ it('reads the container spelling of a path helper in every form, and leaves the 
 
     expect(PatternScan::matches($pattern, '<?php $report->storagePathLabel();'))->toBeFalse(
         'a method whose name merely starts with one of these resolves nothing',
+    );
+});
+
+it('reads a path reached past the container, and leaves an ordinary path() alone', function (): void {
+    $pattern = boundaryStorageIndirectionPattern();
+
+    $caught = [
+        '<?php Storage::disk("local")->path("inbox");',
+        '<?php Storage::path("inbox");',
+        "<?php config('filesystems.disks.local.root');",
+        '<?php config("filesystems.default");',
+    ];
+
+    foreach ($caught as $source) {
+        expect(PatternScan::matches($pattern, $source))->toBeTrue(
+            'a storage root was reached without the path service, in a spelling the rule cannot see: '.$source,
+        );
+    }
+
+    // The two that decide whether this widening is safe: the sanctioned
+    // service reads the same way, and `path(` is an ordinary method name.
+    expect(PatternScan::matches($pattern, '<?php $this->paths->storagePath();'))->toBeFalse(
+        'the path service\'s own accessor IS the sanctioned answer and must not be forbidden',
+    );
+
+    expect(PatternScan::matches($pattern, '<?php $file->path();'))->toBeFalse(
+        'an ordinary path() on something that is not the Storage facade resolves no storage root',
+    );
+
+    expect(PatternScan::matches($pattern, "<?php config('app.name');"))->toBeFalse(
+        'only the filesystems config names a storage root',
     );
 });
 
