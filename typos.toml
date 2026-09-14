@@ -29,6 +29,10 @@ extend-ignore-re = ["\\[[a-z]\\][a-zA-Z]+", "JOINed", "ANDed", "NULLable"]
 [default.extend-words]
 beatrax = "beatrax"
 Beatrax = "Beatrax"
+# The in-toto attestation format, which is the file extension a release
+# provenance bundle carries (`<version>.intoto.jsonl`) and the name of the
+# specification itself. typos reads it as a misspelling of "into".
+intoto = "intoto"
 # A Dutch hosting company that appears as a counterparty in sync fixtures.
 Versio = "Versio"
 versio = "versio"
