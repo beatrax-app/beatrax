@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'error_enroll_unsupported' => 'Ova verzija Beatraxa nema gde da sačuva ključ za otključavanje, pa se biometrijsko otključavanje ne nudi. Ograničenje nije tvoj uređaj.',
+    'error_enroll_device_refused' => 'Tvoj uređaj nije ponudio biometrijsko otključavanje. Ako može da koristi otisak prsta ili lice, sačuvaj ga u podešavanjima uređaja i pokušaj ponovo — do tada je ovde jedino otključavanje tvoj PIN.',
     'error_enroll_unprotected' => 'Biometrijsko otključavanje zahteva skladište ključeva operativnog sistema, a ova instalacija ga nema. Upis bi ostavio ključ za otključavanje čitljiv pored tvojih podataka, pa se ovde ne nudi.',
     'error_enroll_failed' => 'Tvoj uređaj je odbio da sačuva ključ. Biometrijsko otključavanje nije dostupno.',
     'error_enroll_pin_expired' => 'Potvrda PIN-om je istekla pre nego što je uređaj završio. Unesite PIN i pokušajte ponovo.',

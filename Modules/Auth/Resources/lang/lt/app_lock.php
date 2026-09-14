@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'error_enroll_unsupported' => 'Ši Beatrax versija neturi kur išsaugoti atrakinimo rakto, todėl biometrinis atrakinimas nesiūlomas. Riboja ne tavo įrenginys.',
+    'error_enroll_device_refused' => 'Tavo įrenginys nepasiūlė biometrinio atrakinimo. Jei jis gali naudoti piršto atspaudą ar veidą, išsaugok jį įrenginio nustatymuose ir bandyk dar kartą — iki tol čia atrakinti galima tik tavo PIN kodu.',
     'error_enroll_unprotected' => 'Biometriniam atrakinimui reikia operacinės sistemos raktų saugyklos, o šis įdiegimas jos neturi. Registracija paliktų atrakinimo raktą įskaitomą šalia tavo duomenų, todėl čia ji nesiūloma.',
     'error_enroll_failed' => 'Tavo įrenginys atsisakė išsaugoti raktą. Biometrinis atrakinimas negalimas.',
     'error_enroll_pin_expired' => 'PIN kodo patvirtinimas baigė galioti, kol įrenginys nebaigė. Įveskite PIN kodą ir bandykite dar kartą.',

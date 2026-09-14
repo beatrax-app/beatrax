@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'error_enroll_unsupported' => 'Denne versjonen av Beatrax har ingen steder å lagre en opplåsingsnøkkel, så biometrisk opplåsing tilbys ikke. Det er ikke enheten din som er begrensningen.',
+    'error_enroll_device_refused' => 'Enheten din tilbød ikke biometrisk opplåsing. Hvis den kan bruke fingeravtrykk eller ansikt, lagre ett i enhetsinnstillingene og prøv igjen — inntil da er PIN-koden din den eneste opplåsingen her.',
     'error_enroll_unprotected' => 'Biometrisk opplåsing trenger et nøkkellager i operativsystemet, og denne installasjonen har ingen. Registrering ville latt opplåsingsnøkkelen ligge lesbar ved siden av dataene dine, så det tilbys ikke her.',
     'error_enroll_failed' => 'Enheten din nektet å lagre nøkkelen. Biometrisk opplåsing er ikke tilgjengelig.',
     'error_enroll_pin_expired' => 'Bekreftelsen med PIN-kode utløp før enheten ble ferdig. Skriv inn PIN-koden din og prøv igjen.',

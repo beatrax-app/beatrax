@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 return [
     'error_enroll_unsupported' => 'Questa versione di Beatrax non ha dove conservare una chiave di sblocco, quindi lo sblocco biometrico non viene offerto. Il limite non è il tuo dispositivo.',
+    'error_enroll_device_refused' => 'Il tuo dispositivo non ha offerto lo sblocco biometrico. Se può usare impronta o volto, salvane una nelle impostazioni del dispositivo e riprova: fino ad allora qui il tuo PIN è l\'unico sblocco.',
     'error_enroll_unprotected' => 'Lo sblocco biometrico richiede un archivio chiavi del sistema operativo, e questa installazione non ne ha uno. La registrazione lascerebbe la chiave di sblocco leggibile accanto ai tuoi dati, quindi qui non viene offerta.',
     'error_enroll_failed' => 'Il tuo dispositivo ha rifiutato di salvare la chiave. Lo sblocco biometrico non è disponibile.',
     'error_enroll_pin_expired' => 'La conferma con il PIN è scaduta prima che il dispositivo finisse. Inserisci il PIN e riprova.',
