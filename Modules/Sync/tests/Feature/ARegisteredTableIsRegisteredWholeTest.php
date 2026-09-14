@@ -12,13 +12,16 @@ use Modules\Sync\Internal\Crypto\SensitiveFieldRegistry;
 const REGISTERED_WHOLE_CONTENT_TOKENS = [
     'name', 'note', 'description', 'subject', 'label', 'email', 'iban',
     'pattern', 'sender', 'payee', 'memo', 'title', 'body', 'address',
-    'filename', 'file_name', 'value',
+    'filename', 'file_name', 'value', 'reason',
 ];
 
 // Content-shaped by name and not content by nature. Each is here with the same
 // burden the register itself carries: a reason, so that "absent from the three
 // lists" reads as a decision rather than as a column nobody classified.
 const REGISTERED_WHOLE_STRUCTURAL = [
+    'pending_enrichment_conflicts.field_name' => 'Holds the NAME of the column a receipt disagrees about — the string "description", not a description — and is the third column the conflict upsert matches on.',
+    'migration_staging_unmapped_items.field_name' => 'Holds the NAME of the field a reconcile found changed on both sides. Same shape as the two entries around it.',
+    'migration_staging_unmapped_items.display_label' => 'A StoredCopy of ConflictLabel::keyFor(entity, field): a translation key naming which label to show, with no value interpolated into it. The values sit in reason beside it, which is on the open map.',
     'migration_import_baseline.field_name' => 'Holds the NAME of the column the baseline was taken for — the string "description", not a description. It is also the merge key the resolver looks a baseline up by.',
     'transactions.normalization_version' => 'An integer version stamp for the normaliser that produced counterparty_normalized; it matches the token only through "normalization".',
     'transactions.value_date' => 'A date, not a value: the day the bank applied the entry. It matches on the "value" token alone.',
@@ -27,9 +30,13 @@ const REGISTERED_WHOLE_STRUCTURAL = [
 
 // Content, assessed, and NOT yet sealed — kept out of knowinglyPlaintext()
 // deliberately, because that list means "AEAD cannot apply here" and for these
-// it can. Naming them in the guard that found them is what stops the next pass
-// re-deriving the same three columns from scratch.
+// it can. Naming one here also brings its table under the walk, so a table none
+// of the three registry lists mentions can still be held to its whole surface.
 const REGISTERED_WHOLE_OPEN = [
+    'migration_staging_unmapped_items.local_value' => 'The decrypted transactions.description a reconcile found changed on both sides, written so the unmapped-items screen can show what the ledger holds against what the export says. ThreeWayMergeResolver opens the row and CheckForUpdates writes the opened value — the same two-file shape as the pair above.',
+    'migration_staging_unmapped_items.source_value' => 'The export\'s own value for that same field: plaintext off the source product, and the pre-image of the sealed column it would be written to. Same standing as local_value beside it.',
+    'migration_staging_unmapped_items.baseline_value' => 'What both sides are compared against — the role migration_import_baseline.baseline_value plays, and THAT column is on knowinglyPlaintext() for it while this one was on no list at all. Written by ConflictValueCodec::toStorage, which casts to string and seals nothing.',
+    'migration_staging_unmapped_items.reason' => 'StoredCopy::of() json-encodes the copy spec AND the rendered sentence, and the spec\'s parameters are local, source and baseline — so this column holds all three values a second time, in the reader\'s own language. It is also why "reason" joined the token list: no token matched this column name before it.',
     'categories.name' => 'categories.slug is Str::slug() of it, carries unique(user_id, slug) plus a partial UNIQUE over the global rows, and cannot be sealed — so a sealed name leaves the readable copy one column over. The global rows additionally have user_id IS NULL while the codec keys on a user. Same shape as accounts.name, which is on the register with the same argument.',
     'merchant_aliases.friendly_name' => 'A user\'s own naming of a merchant. The only column here with no blocker at all: no predicate, no UNIQUE, no derivation from an unsealable neighbour, and its writers are Livewire components, so the app-lock key is in scope. Sealing it is a read-path change across the alias screens and the YAML importer.',
     'migration_runs.original_filename' => 'The browser-supplied upload name, stored verbatim and copied forward onto every reconcile run. No index, no unique, no predicate, never rendered from the column — and its writer is a Livewire component, so the app-lock key is in scope. Its sibling file_imports.source_filename holds the same kind of string and is on the register, because that one is written from a queue.',
@@ -45,6 +52,7 @@ function registeredWholeTables(): array
         ...SensitiveFieldRegistry::columns(),
         ...array_keys(SensitiveFieldRegistry::knowinglyPlaintext()),
         ...array_keys(SensitiveFieldRegistry::blindIndexColumns()),
+        ...array_keys(REGISTERED_WHOLE_OPEN),
     ];
 
     $tables = [];
@@ -157,7 +165,8 @@ it('names no structural column that the schema does not have', function (): void
 it('sees both halves of the pair that motivated it', function (): void {
     expect(registeredWholeIsContentShaped('detected_name'))->toBeTrue()
         ->and(registeredWholeIsContentShaped('display_name_override'))->toBeTrue()
-        ->and(registeredWholeIsContentShaped('baseline_value'))->toBeTrue();
+        ->and(registeredWholeIsContentShaped('baseline_value'))->toBeTrue()
+        ->and(registeredWholeIsContentShaped('reason'))->toBeTrue();
 });
 
 // An open entry that the registry has since classified is a stale exemption,
