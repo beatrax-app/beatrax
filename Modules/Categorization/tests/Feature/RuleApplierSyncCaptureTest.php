@@ -92,9 +92,12 @@ function seedRuleSyncCaptureFixtures(): array
     ];
 }
 
-// Category, counterparty and note only: tax_tag delegates to TagTransaction,
-// which dispatches TransactionTagged rather than TransactionMutated and adds
-// no op_log row, blurring the "N changed fields, N ops" count.
+// Category, counterparty and note only, and still for the reason below rather
+// than the one this comment used to give: tax_tag delegates to TagTransaction,
+// which HAS captured since the writers were wired, on tax_transaction_tags
+// rather than on transactions. Ops on a second table are exactly what blurs the
+// "N changed fields, N ops" count, so the action stays out of the rule here —
+// what it puts on the wire is asserted where that table is the subject.
 function makeRuleSyncCaptureRule(int $userId, int $categoryId, int $counterpartyId): CategorizationRule
 {
     $rule = CategorizationRule::query()->create([
