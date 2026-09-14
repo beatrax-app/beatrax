@@ -226,7 +226,7 @@
                                  parent total — never a client-recomputed sum (UI-SPEC §5.1). --}}
                             <span class="amount {{ $isPositive($rowAmt) ? 'positive' : '' }}">
                                 {{ $fmt($rowAmt) }}
-                                @if (! $isSearchMode && $currency === CurrencyView::Original->value)
+                                @if ($currency === CurrencyView::Original->value)
                                     <x-ledger::secondary-amount :money="$rowSecondary($row)" />
                                 @endif
                             </span>
@@ -442,6 +442,9 @@
                                 <span class="block text-sm text-slate-900 dark:text-slate-100">
                                     {{ Money::ofMinor($row->amountMinor, $row->amountCurrency)->format() }}
                                 </span>
+                                @if ($currency === CurrencyView::Original->value && $row->secondaryMinor !== null && $row->secondaryCurrency !== null)
+                                    <x-ledger::secondary-amount :money="Money::ofMinor($row->secondaryMinor, $row->secondaryCurrency)" />
+                                @endif
                             @else
                                 {{-- Always the parent total — never a client-recomputed
                                      leg sum (UI-SPEC §5.1). --}}

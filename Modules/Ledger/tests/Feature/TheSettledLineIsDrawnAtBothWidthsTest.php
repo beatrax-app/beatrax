@@ -21,6 +21,7 @@ beforeEach(function (): void {
 
     /** @var Account $account */
     $account = Account::query()->where('iban', 'NL57ASNB0123456789')->firstOrFail();
+    $this->account = $account;
     $this->run = $this->makeImportRun($this->fixtureUser);
 
     $this->makeTransaction($this->fixtureUser, $account, $this->run, [
@@ -79,4 +80,23 @@ it('leaves the settled line off both widths when the reader asked for one amount
 
     expect($halves['phone'])->not->toContain('data-secondary-amount')
         ->and($halves['desktop'])->not->toContain('data-secondary-amount');
+})->group('phase-3');
+
+it('draws the settled amount at both widths when a filter puts the list in search mode', function (): void {
+    // Same rows, same reader, same currency preference -- only the mode
+    // differs. The search branch reads the amount from the decomposed
+    // minor/currency pair rather than a Money object, and dropped the
+    // settled line that the browsing branch draws at both widths.
+    $settledEur = Money::ofMinor(-1207, 'EUR')->format();
+
+    $component = Livewire::test(TransactionsList::class)
+        ->set('currency', 'original')
+        ->set('filterAccounts', [$this->account->id]);
+
+    expect($component->instance()->isSearchActive())->toBeTrue('the filter did not put the list in search mode');
+
+    $halves = halvesOfTheList($component->html());
+
+    expect($halves['phone'])->toContain($settledEur)
+        ->and($halves['desktop'])->toContain($settledEur);
 })->group('phase-3');
