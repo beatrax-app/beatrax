@@ -83,6 +83,8 @@ jobs:
 
             - name: Stage the shipped .env
               uses: ./.github/actions/stage-shipped-env
+              with:
+                  app-version: ${{ inputs.tag }}
 
             - name: Stage the NativePHP electron scaffold
               shell: bash
@@ -191,6 +193,8 @@ jobs:
 
             - name: Stage the shipped .env
               uses: ./.github/actions/stage-shipped-env
+              with:
+                  app-version: ${{ inputs.tag }}
 
             - name: Stage the NativePHP electron scaffold
               shell: bash
@@ -329,6 +333,8 @@ jobs:
 
             - name: Stage the shipped .env
               uses: ./.github/actions/stage-shipped-env
+              with:
+                  app-version: ${{ inputs.tag }}
 
             - name: Stage the NativePHP electron scaffold
               shell: bash
@@ -418,6 +424,7 @@ jobs:
               uses: ./.github/actions/stage-shipped-env
               with:
                   working-directory: mobile-app
+                  app-version: ${{ inputs.tag }}
 
             - name: Lay down the rest of the mobile environment
               working-directory: mobile-app

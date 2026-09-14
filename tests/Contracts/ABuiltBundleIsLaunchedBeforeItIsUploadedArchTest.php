@@ -9,11 +9,17 @@ declare(strict_types=1);
 // start. The workflow said so in a comment, claiming an Electron bundle cannot
 // be launched on a hosted runner; xvfb is the display it was missing.
 //
-// All three desktop legs now have it, and each is pinned inside its own job
-// rather than by position in the file, so a step that drifts into the wrong
-// job fails here instead of reading as covered. Android is deliberately not in
-// this list: an APK is installed onto a device or an emulator and has no
-// process a runner can ask for /health, so the same shape does not apply to it.
+// Linux and Windows are pinned here, each inside its own job rather than by
+// position in the file, so a step that drifts into the wrong job fails here
+// instead of reading as covered.
+//
+// Two legs are deliberately absent. Android installs onto a device or an
+// emulator and has no process a runner can ask. macOS was added and then
+// removed on measurement: v2.0.0-rc.3 executed the bundle's own binary, got
+// past every signing gate, and Electron died with "Failed to reserve virtual
+// memory for CodeRange" -- V8 cannot reserve its code range on a macos-14
+// runner. Both are covered by installing a release on a real machine, which is
+// a person's job.
 // @link ../../scripts/desktop_smoke.sh
 
 const LAUNCH_WORKFLOW = '.github/workflows/release.yml';
@@ -71,7 +77,6 @@ it('launches every desktop bundle and asks it for health before uploading it', f
     expect($smokeAt)->toBeLessThan($uploadAt, sprintf('The smoke test in %s runs after its upload, so a bundle that cannot start is published before anything asks it.', $job));
 })->with([
     'linux' => ['build-linux', 'Upload Linux artifacts'],
-    'macos' => ['build-macos', 'Upload macOS artifacts (arm64)'],
     'windows' => ['build-windows', 'Upload Windows artifacts'],
 ]);
 

@@ -45,6 +45,16 @@ inputs:
             here, because the bundled `.env` is where the runtime reads them.
         required: false
         default: ''
+    app-version:
+        description: >-
+            The tag this bundle is built from, with or without its leading `v`,
+            written as NATIVEPHP_APP_VERSION. Not `extra` config: this is the
+            bundle learning which release it is, and without it the runtime
+            answers `0.0.0-dev` to the version chip, to the update comparison
+            and to /health. Normalised here rather than by each caller, because
+            the leading `v` belongs to the tag and not to the version.
+        required: false
+        default: ''
 
 runs:
     using: composite
@@ -54,6 +64,7 @@ runs:
           working-directory: ${{ inputs.working-directory }}
           env:
               EXTRA: ${{ inputs.extra }}
+              APP_VERSION: ${{ inputs.app-version }}
           run: |
               set -euo pipefail
 
@@ -88,6 +99,10 @@ runs:
                   printf '%s\n' "$line" >> .env
               done <<< "$EXTRA"
 
+              if [ -n "$APP_VERSION" ]; then
+                  printf 'NATIVEPHP_APP_VERSION=%s\n' "${APP_VERSION#v}" >> .env
+              fi
+
               # A staging step that ran is not a staging step that worked,
               # and a renamed key in the template fails silently. Read the file
               # back rather than trusting the write above it.
@@ -98,5 +113,14 @@ runs:
                   fi
               done
 
+              # Read back for the same reason as the two above: a bundle that
+              # ships without this boots, runs, and tells every reader it is
+              # `0.0.0-dev`. Nothing downstream fails, which is why it survived
+              # to a release.
+              if [ -n "$APP_VERSION" ] && ! grep -qE '^NATIVEPHP_APP_VERSION=.+$' .env; then
+                  echo "::error::stage-shipped-env: the staged .env carries no NATIVEPHP_APP_VERSION, so this bundle would report itself as a development build."
+                  exit 1
+              fi
+
               echo "Staged $(pwd)/.env:"
-              grep -E '^(APP_ENV|APP_DEBUG|AUTO_UPDATE_FEED_URL|NATIVEPHP_UPDATER_ENABLED)=' .env
+              grep -E '^(APP_ENV|APP_DEBUG|AUTO_UPDATE_FEED_URL|NATIVEPHP_UPDATER_ENABLED|NATIVEPHP_APP_VERSION)=' .env
