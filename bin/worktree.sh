@@ -12,6 +12,13 @@
 #   mobile-app/    the second Composer root: its bootstrap/cache and storage
 #                  runtime directories are gitignored AND empty, so git creates
 #                  neither and the framework cannot boot there at all.
+#   node_modules/  no vite, so `npm run build` is `vite: command not found`.
+#                  That one reads as optional until you change a blade or a
+#                  stylesheet: public/build is COPIED, so the worktree carries
+#                  the main checkout's bundle and every Tailwind class the
+#                  change introduces is simply missing from it. The page then
+#                  renders against the old CSS and the measurement taken from
+#                  it is of a layout nobody is shipping.
 #
 # public/build/ is COPIED rather than hardlinked, for its mtimes. `git worktree
 # add` stamps every source file at checkout time, so a hardlinked bundle carries
@@ -107,6 +114,26 @@ copy_tree() {
     echo "    $what copied and stamped after the checkout"
 }
 
+# What copy_tree above only claims. Its stamp asserts "the bundle built from
+# these exact sources", and the copy cannot know that: it takes whatever the
+# main checkout happens to hold and dates it after the checkout, so a bundle
+# that is genuinely stale arrives looking fresher than the sources and the
+# staleness guard has nothing left to see. Measured 2026-09-14: the main
+# checkout sat on `main` with a clean tree and its bundle was two builds
+# behind its own HEAD — a fresh build of the identical commit produced a
+# different hash. A worktree that can build is handed one that IS from these
+# sources rather than one asserted to be.
+build_front_end() {
+    if (cd "$target" && npm run build >/dev/null 2>&1); then
+        echo "    public/build rebuilt from this checkout's own sources"
+    else
+        echo "!!  npm run build failed in $target, so public/build is still the copy" >&2
+        echo "!!  taken from $main and stamped as though it came from here. A blade or" >&2
+        echo "!!  stylesheet change will render against the wrong CSS. Run it directly:" >&2
+        echo "!!    cd $target && npm run build" >&2
+    fi
+}
+
 # Composer writes these in place, so they must not be shared. Done every run,
 # not only on creation: a worktree bootstrapped before this existed still holds
 # the links, and re-running is how it is repaired.
@@ -186,6 +213,19 @@ fi
 redump_autoload
 copy_tree public/build
 
+# Hardlinked for the reason vendor/ is: 83 MB, and .bin/* are RELATIVE symlinks
+# so they resolve inside this worktree rather than the main one. npm rewrites
+# node_modules in place the way composer rewrites vendor/composer, so run
+# `npm install` in the main checkout and re-run this script — an install here
+# writes through every sibling that shares these inodes.
+if [[ -d $main/node_modules ]]; then
+    link_tree node_modules
+    build_front_end
+else
+    echo "    node_modules absent from the main checkout; npm run build will not work here,"
+    echo "    and the bundle above is the main checkout's, whatever it was built from"
+fi
+
 if [[ -e $target/.env ]]; then
     echo "    .env already present"
 else
@@ -195,7 +235,7 @@ fi
 
 # A symlink here is the failure this script exists to prevent, so it is checked
 # rather than trusted.
-for what in vendor public/build mobile-app/vendor; do
+for what in vendor public/build mobile-app/vendor node_modules; do
     [[ -e $target/$what ]] || continue
     if [[ -L $target/$what ]]; then
         echo "!!  $target/$what is a SYMLINK. Pest will resolve the project root to" >&2

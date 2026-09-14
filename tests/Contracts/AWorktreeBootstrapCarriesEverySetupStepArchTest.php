@@ -7,6 +7,17 @@ declare(strict_types=1);
 // failures across 4 files, no .env is a key:generate that throws on a file that
 // is not there, and no mobile-app/vendor is a docs-symbol rule that SKIPS.
 
+// node_modules is the one that reports nothing at all. public/build is copied,
+// so a worktree that cannot rebuild it renders every blade and stylesheet
+// change against the main checkout's bundle -- the new Tailwind classes are
+// simply absent -- and a layout measured there is one nobody is shipping.
+
+// The copy is stamped after the checkout, which asserts it was built from these
+// sources. Nothing checks that. Measured 2026-09-14: the main checkout sat on
+// `main` with a clean tree and its bundle was behind its own HEAD, so every
+// worktree took a stale bundle wearing a fresh date. A worktree that can build
+// now builds.
+
 // The quiet ones are why this file is not named for a number. A skip reads as a
 // pass to everything that counts tests, so the docs-symbol rule ran only in CI
 // for as long as the script left the second Composer root out. The root's own
@@ -50,6 +61,8 @@ it('brings every gitignored thing a fresh worktree lacks', function (): void {
         'mobile-app/vendor' => 'link_tree mobile-app/vendor',
         'the mobile root\'s runtime directories' => '"$target/mobile-app/bootstrap/cache"',
         'the mobile root\'s .env' => 'cp "$main/mobile-app/.env"',
+        'node_modules' => 'link_tree node_modules',
+        'a bundle built from this checkout rather than copied' => 'build_front_end',
     ];
 
     $missing = [];
