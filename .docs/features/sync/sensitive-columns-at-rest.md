@@ -730,7 +730,11 @@ cases — `FingerprintStage` opens the row and `ApplyEnrichments` writes the ope
 `ADecryptedValueLandsOnlyWhereItMayArchTest`, which pins files that open AND write, sees neither
 half alone. And `ARegisteredTableIsRegisteredWholeTest` built its walk from the three registry
 lists, so a table on none of them was never inspected by the guard whose whole purpose is finding
-the column nobody classified. Thirty-nine tables sit in that blind spot today.
+the column nobody classified. Thirty-nine tables sat in that blind spot when this was written,
+counted by a token list that did not yet hold `reason`; thirty-four do now. The two figures are
+not one subtraction apart, and the difference is the point: adding `reason` brought
+`anomaly_alerts` and `card_statement_credits` into view, and making the open map register its
+table took `migration_runs` out of it without anyone classifying a column.
 
 The two receipt columns are on `knowinglyPlaintext()` now, which is where a decided exception
 belongs and what closes the asymmetry for real. The four migration columns are open work instead:
@@ -738,6 +742,34 @@ nothing has decided them, and AEAD can apply — `knowinglyPlaintext()` means it
 not go there. Naming a column in the guard's open map now registers its table, which is what holds
 that table whole. `reason` joined the token list for the same reason it was missing from it: no
 token matched that column name, and it carries the most complete copy of the three.
+
+The same two migration tables turned out to hold the shape a second time, and with far more
+breadth. `migration_staging_transactions.description` is the plaintext description off the export
+and the pre-image of the sealed `transactions.description` written from it, and
+`migration_staging_payees.normalized_name` is the pre-image of `transactions.counterparty_name` —
+`PromotionMaps` reads that table to build `payeeNames` and `PromoteStagingToDomain` passes them
+straight in as `counterpartyName`.
+
+Neither is transient, which is what makes them worth naming. `DiscardMigrationRun` clears staging
+through `DependentRowCascade`; `ConfirmMigration` has no delete at all. So a run that **fails** or
+is thrown away leaves nothing, and a run that **succeeds** leaves one readable copy of every
+migrated description and payee name standing beside the sealed columns they became. That is the
+opposite of the intuition the word *staging* invites. `ThreeWayMergeResolver` reads staging back
+during a later reconcile, so the retention is at least partly deliberate, and the answer is to
+seal the columns rather than to delete the rows.
+
+The thirty-four that remain were each read against what their values become, and none of them is
+a copy of a sealed column. They are the reader's own naming (`goals.name`, `pots.name`,
+`saved_reports.name`, `envelope_moves.memo`), framework storage (`cache.value`,
+`sessions.ip_address`, `job_batches.name`), the word a state machine recorded for a transition
+(`anomaly_alerts.reasons` holds `large`, `duplicate`, `first_time`), and the op-log columns, which
+carry whatever each source column's own classification produced — an `accounts.iban` entry is in
+the clear there because that column is disclosed, and a `counterparties.iban` entry beside it is
+base64 with a `gdk_epoch`. The three remaining `migration_staging_*` name columns are the same
+pre-image shape as the two above, and are not leaks for the reason that matters: `accounts.name`
+is disclosed, `categories.name` is open work, and `goals.name` is not sealed, so none of them is
+a plaintext copy of something sealed elsewhere. That is inspection, not proof, and it is recorded
+so the next pass starts from it rather than from the top.
 
 ## Why money columns are not on the list
 
@@ -1329,6 +1361,12 @@ it never collides, and a route parameter built from it resolves to nothing.
   and `accounts.slug` move together or not at all, and moving them together means a blind index,
   not an allowlist entry.
 
+  `statement_summaries.iban_owner` is on the list for that same objection, one table over. Its
+  name reads like an account holder and it is not: `Camt053Adapter` and
+  `Mt940StatementAccumulator` both fill it from `$ownIban`, so it holds the statement's **own**
+  IBAN — the same value `accounts.iban` already keeps in the clear, and for reasons that are not
+  going away. Sealing the copy while the original stays readable buys nothing.
+
 ### The decision is recorded, not merely absent
 
 `SensitiveFieldRegistry::knowinglyPlaintext()` lists these columns with a one-line reason
@@ -1453,7 +1491,7 @@ The word carrying the weight there is **any**, and for a long time it was also t
 with *none* was owned by nobody, and the walk never opened it. That is how the two shadows in
 *A shadow on a table the guard could not reach* stood. Naming a column in the guard's open map
 registers its table now, so a table can be brought under the rule by recording open work on it
-rather than by claiming a blocker it does not have. Thirty-nine tables still carry
+rather than by claiming a blocker it does not have. Thirty-four tables still carry
 content-shaped columns and sit on no list at all.
 
 It is deliberately not run over every table in the schema. That check is expressible and would
