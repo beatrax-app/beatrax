@@ -2457,6 +2457,7 @@ it('does not allow a cross-module Internal import outside the pinned production 
         'Modules/Budgets/tests/Feature/MovingTheBudgetMonthTakesThePlanWithItTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\SettingsPage',
         'Modules/Calendar/tests/Feature/CalendarPaletteAndSidebarTest.php -> Modules\\DevMode\\Internal\\Navigation\\NavigationRegistryImpl',
         'Modules/Calendar/tests/Feature/CalendarPaletteAndSidebarTest.php -> Modules\\Shell\\Internal\\Http\\Livewire\\AppSidebar',
+        'Modules/Categorization/tests/Feature/ARuleDoesNotWipeATaxNoteItCouldNotReadTest.php -> Modules\\Sync\\Internal\\Crypto\\GdkKeyringService',
         'Modules/Categorization/tests/Feature/FieldProvenanceStampingTest.php -> Modules\\Ledger\\Internal\\Http\\Livewire\\TransactionDetail',
         'Modules/Categorization/tests/Feature/RuleApplierSyncCaptureTest.php -> Modules\\Sync\\Internal\\OpLog\\OpLogWriter',
         'Modules/Categorization/tests/Feature/RuleSchemaMigrationTest.php -> Modules\\Sync\\Internal\\Config\\MergeRulesRegistry',
