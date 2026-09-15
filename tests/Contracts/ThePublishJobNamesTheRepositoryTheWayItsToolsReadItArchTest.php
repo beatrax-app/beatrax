@@ -81,3 +81,15 @@ it('leaves the build jobs on the name NativePHP wants', function (): void {
     expect(str_contains($workflow, 'GITHUB_REPO: ${{ github.event.repository.name }}'))
         ->toBeTrue('The workflow-level GITHUB_REPO is no longer the bare repository name NativePHP reads, so the updater feed in every built bundle would name the wrong repo.');
 });
+
+it('builds the notes without reaching for the network', function (): void {
+    $publish = publishRepoJob(publishRepoWorkflow(), 'publish');
+
+    // Naming the repository is what switches git-cliff's GitHub integration on.
+    // Measured: a valid name with no token panics on a 401, and with a token it
+    // pages /commits across the whole span -- roughly nineteen requests for a
+    // major -- inside a ten-minute job. `--offline` produces byte-identical
+    // notes, because this config builds its links from a literal URL.
+    expect(str_contains($publish, '--offline'))
+        ->toBeTrue('The release-notes step does not run git-cliff with --offline, so naming the repository turns on a GitHub fetch the changelog does not need and a rate limit can fail the publish.');
+});
