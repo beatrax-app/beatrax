@@ -1420,16 +1420,18 @@ jobs:
                   # stay as draft so a human can review + publish.
                   draft: true
                   prerelease: ${{ contains(github.ref_name, '-') }}
-                  # Every platform artifact, the checksum file, and the
-                  # Ed25519 detached signature written beside each of the
-                  # things that carry one. Installed bundles fetch the
-                  # matching `.sig` alongside the manifest and verify before
-                  # any download proceeds; a human verifying by hand reads
-                  # the checksum file and its own `.sig`.
-                  files: |
-                      artifacts/**/*
-                      artifacts/**/latest*.yml.sig
-                      artifacts/**/beta*.yml.sig
+                  # Every platform artifact, the checksum file, and the Ed25519
+                  # detached signature beside each thing that carries one: an
+                  # installed bundle fetches the `.sig` with the manifest and
+                  # verifies before any download proceeds.
+                  #
+                  # One pattern, and only one. `artifacts/**/*` already matches
+                  # those signatures, so naming them again listed all eight twice
+                  # -- 35 uploads for 27 assets -- and each duplicate pair raced:
+                  # one won, the other tried to update an asset mid-replace and
+                  # the release died on `Not Found`, after every build and both
+                  # smoke tests had passed.
+                  files: artifacts/**/*
 
             - name: Flip prerelease draft to published
               if: contains(github.ref_name, '-')

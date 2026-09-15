@@ -108,3 +108,30 @@ it('moves the release body by path, never through the environment', function ():
     expect(str_contains($publish, 'steps.cliff.outputs.changelog'))
         ->toBeTrue('The publish job does not read the notes from the file git-cliff wrote, which is the only route that survives a body larger than one environment variable can hold.');
 });
+
+it('lists every published asset exactly once', function (): void {
+    $publish = publishRepoJob(publishRepoWorkflow(), 'publish');
+
+    // `artifacts/**/*` already matches the detached signatures. Naming them
+    // again put all eight in the upload list twice -- 35 uploads for 27 assets
+    // -- and each duplicate pair raced, one winning while the other tried to
+    // update an asset mid-replace. The release failed on `Not Found` with
+    // every build and both smoke tests already green.
+    $duplicated = [];
+
+    foreach (['latest*.yml.sig', 'beta*.yml.sig'] as $pattern) {
+        if (str_contains($publish, 'artifacts/**/'.$pattern)) {
+            $duplicated[] = $pattern;
+        }
+    }
+
+    expect($duplicated)->toBe([], sprintf(
+        "The upload list names these beside `artifacts/**/*`, which already matches them, so each is uploaded twice and the pair races:
+  %s",
+        implode("
+  ", $duplicated),
+    ));
+
+    expect(str_contains($publish, 'files: artifacts/**/*'))
+        ->toBeTrue('The publish job no longer uploads every artefact under artifacts/, so a bundle, a manifest or a signature would be missing from the release page.');
+});
