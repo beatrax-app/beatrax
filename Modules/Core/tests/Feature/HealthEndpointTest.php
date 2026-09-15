@@ -52,7 +52,7 @@ it('reports status "ok"', function (): void {
     $response->assertOk();
     $response->assertExactJson([
         'status' => 'ok',
-        'app_version' => (string) (getenv('NATIVEPHP_APP_VERSION') ?: 'dev'),
+        'app_version' => (string) (config('nativephp.version') ?: 'dev'),
         'php_version' => PHP_VERSION,
         'sqlite_version' => $this->app->make(DatabaseManager::class)
             ->connection()
@@ -99,25 +99,50 @@ it('never names an interface in the body it hands a caller', function (): void {
     expect($response->getContent())->not->toContain('192.168.1.10');
 });
 
-it('reports the NATIVEPHP_APP_VERSION env var when set', function (): void {
-    putenv('NATIVEPHP_APP_VERSION=0.1.0-rc.1');
-    try {
-        $response = $this->get('/health');
+it('reports the version the bundle was configured with', function (): void {
+    config(['nativephp.version' => '0.1.0-rc.1']);
 
-        $response->assertOk();
-        expect($response->json('app_version'))->toBe('0.1.0-rc.1');
-    } finally {
-        putenv('NATIVEPHP_APP_VERSION');
-    }
+    $response = $this->get('/health');
+
+    $response->assertOk();
+    expect($response->json('app_version'))->toBe('0.1.0-rc.1');
 });
 
-it('reports app_version "dev" when NATIVEPHP_APP_VERSION is unset', function (): void {
-    putenv('NATIVEPHP_APP_VERSION');
+it('reports app_version "dev" when the bundle carries no version', function (): void {
+    config(['nativephp.version' => null]);
 
     $response = $this->get('/health');
 
     $response->assertOk();
     expect($response->json('app_version'))->toBe('dev');
+});
+
+// The regression this file exists to hold. A packaged bundle runs `artisan
+// optimize` at startup; with configuration cached Laravel never runs Dotenv, so
+// getenv answers false however well the .env was staged. Reading the process
+// environment here shipped `dev` on every release bundle.
+it('answers from config even when the process environment disagrees', function (): void {
+    config(['nativephp.version' => '2.0.0']);
+    putenv('NATIVEPHP_APP_VERSION=this-must-not-win');
+
+    try {
+        $response = $this->get('/health');
+
+        $response->assertOk();
+        expect($response->json('app_version'))->toBe('2.0.0');
+    } finally {
+        putenv('NATIVEPHP_APP_VERSION');
+    }
+});
+
+it('still answers when the process environment carries nothing at all', function (): void {
+    config(['nativephp.version' => '2.0.0']);
+    putenv('NATIVEPHP_APP_VERSION');
+
+    $response = $this->get('/health');
+
+    $response->assertOk();
+    expect($response->json('app_version'))->toBe('2.0.0');
 });
 
 it('reports the PHP_VERSION constant verbatim', function (): void {

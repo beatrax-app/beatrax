@@ -68,13 +68,32 @@ it('reads the version from somewhere the shipped bundle actually has', function 
     $snapshot = shippedVersionRead('Modules/Core/Internal/Support/RuntimeHealthSnapshot.php');
     expect($snapshot)->not->toBe('', 'The health snapshot is not where this rule looks.');
 
-    // getenv() rather than env(): it works only because Laravel's putenv bridge
-    // is on, which is the default and is not disabled here. Pinning the pair
-    // together so that turning one off cannot quietly turn the other into `dev`.
-    $usesGetenv = PatternScan::matches('/getenv\(\s*.NATIVEPHP_APP_VERSION./', $snapshot);
-    $disabled = PatternScan::matches('/Env::disablePutenv\(/', shippedVersionRead('bootstrap/app.php'));
+    // This rule used to pass whenever `Env::disablePutenv()` was absent, which
+    // read the bridge as on. A packaged bundle runs `artisan optimize`, and a
+    // cached configuration makes Laravel skip Dotenv entirely -- the bridge is
+    // off with nothing to grep for. v2.0.0 shipped `dev` straight through it.
+    expect(PatternScan::matches('/getenv\\(\\s*.NATIVEPHP_APP_VERSION./', $snapshot))
+        ->toBeFalse('The health snapshot reads NATIVEPHP_APP_VERSION from the process environment. A packaged bundle caches its configuration, so Dotenv never runs, the putenv bridge never fires, and this answers `dev` however correctly the .env was staged.');
 
-    expect($usesGetenv && $disabled)->toBeFalse('The health snapshot reads NATIVEPHP_APP_VERSION with getenv() while putenv is disabled, so it can never see a value that came from the shipped .env and will always answer `dev`.');
+    expect(PatternScan::matches("/config->get\\(\\s*'nativephp\\.version'/", $snapshot))
+        ->toBeTrue('The health snapshot does not resolve nativephp.version through config, which is the one source a bundle still has after its configuration is cached.');
+});
+
+it('has its three version readers agree on one source', function (): void {
+    // The chip, the update comparison and /health answered from two different
+    // places, and only the odd one out was wrong. Naming them together so a
+    // fourth reader cannot quietly pick the environment again.
+    $readers = [
+        'Modules/Core/Internal/Support/RuntimeHealthSnapshot.php',
+        'Modules/Core/Public/Services/ElectronUpdateChannel.php',
+    ];
+
+    foreach ($readers as $reader) {
+        $body = shippedVersionRead($reader);
+        expect($body)->not->toBe('', sprintf('%s is not where this rule looks.', $reader));
+        expect(PatternScan::matches('/getenv\\(\\s*.NATIVEPHP_APP_VERSION./', $body))
+            ->toBeFalse(sprintf('%s reads the version from the process environment, which a bundle with cached configuration does not carry.', $reader));
+    }
 });
 
 // The composite action is one bash script under a `run:` key. Lifted by
