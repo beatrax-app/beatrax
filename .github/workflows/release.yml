@@ -1377,12 +1377,25 @@ jobs:
             - name: Fit the release notes to the API limit
               id: notes
               env:
-                  NOTES: ${{ steps.cliff.outputs.content }}
+                  # The path git-cliff wrote, never its content. A single
+                  # environment variable is capped at MAX_ARG_STRLEN -- 128KB on
+                  # Linux -- and this body is 246KB, so interpolating it made
+                  # execve fail with "Argument list too long" and the step that
+                  # exists to trim an oversized body could not receive one.
+                  NOTES_FILE: ${{ steps.cliff.outputs.changelog }}
                   TAG: ${{ github.ref_name }}
               run: |
                   set -euo pipefail
                   limit=124000
-                  printf '%s' "$NOTES" > notes.md
+                  if [ -z "${NOTES_FILE:-}" ] || [ ! -f "$NOTES_FILE" ]; then
+                      echo "::error::git-cliff reported no notes file at '${NOTES_FILE:-}', so the release would publish with an empty body."
+                      exit 1
+                  fi
+                  cp "$NOTES_FILE" notes.md
+                  if [ ! -s notes.md ]; then
+                      echo "::error::the generated notes are empty, so the release body would say nothing about what this tag contains."
+                      exit 1
+                  fi
                   if [ "$(wc -c < notes.md)" -gt "$limit" ]; then
                       head -c "$limit" notes.md | sed '$d' > notes.trimmed
                       printf '\n\n_Trimmed to fit. The complete log for %s is on the [commit history](%s/commits/%s)._\n' \

@@ -93,3 +93,18 @@ it('builds the notes without reaching for the network', function (): void {
     expect(str_contains($publish, '--offline'))
         ->toBeTrue('The release-notes step does not run git-cliff with --offline, so naming the repository turns on a GitHub fetch the changelog does not need and a rate limit can fail the publish.');
 });
+
+it('moves the release body by path, never through the environment', function (): void {
+    $publish = publishRepoJob(publishRepoWorkflow(), 'publish');
+
+    // A single environment variable is capped at MAX_ARG_STRLEN -- 128KB on
+    // Linux -- and a major release's notes are about 246KB. Interpolating them
+    // made execve fail with "Argument list too long", so the step written to
+    // trim an oversized body was the one thing an oversized body could not
+    // reach. It never reproduced on macOS, whose cap is larger.
+    expect(str_contains($publish, 'steps.cliff.outputs.content'))
+        ->toBeFalse('The publish job interpolates git-cliff content into the environment. A body over 128KB cannot be passed that way, and the failure is "Argument list too long" rather than anything naming the notes.');
+
+    expect(str_contains($publish, 'steps.cliff.outputs.changelog'))
+        ->toBeTrue('The publish job does not read the notes from the file git-cliff wrote, which is the only route that survives a body larger than one environment variable can hold.');
+});
