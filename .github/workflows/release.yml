@@ -1360,12 +1360,16 @@ jobs:
                       ' -- "$signable"
                   done
 
+            # `--offline` because naming the repository switches git-cliff's
+            # GitHub integration on, and it then pages /commits across the
+            # whole span -- about nineteen requests for v2.0.0, inside a
+            # ten-minute job -- to enrich notes built from a literal URL.
             - name: Generate release notes (git-cliff)
               id: cliff
               uses: orhun/git-cliff-action@f50e11560dce63f7c33227798f90b924471a88b5  # v4.8.0
               with:
                   config: cliff.toml
-                  args: --latest --strip header
+                  args: --latest --strip header --offline
 
             # A release body over the API's limit is rejected outright, and
             # a major version spanning hundreds of commits gets there. Trim
