@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Core\Internal\Support;
 
+use Illuminate\Contracts\Config\Repository;
 use Illuminate\Database\DatabaseManager;
 
 // The SQLite version is read through a live query rather than a constant: the
@@ -14,6 +15,7 @@ final readonly class RuntimeHealthSnapshot
     public function __construct(
         private DatabaseManager $db,
         private NetworkBoundary $boundary,
+        private Repository $config,
     ) {}
 
     // The boundary state is a fixed word, never the interface list: an operator
@@ -25,12 +27,16 @@ final readonly class RuntimeHealthSnapshot
      */
     public function __invoke(): array
     {
-        $envVersion = getenv('NATIVEPHP_APP_VERSION');
+        // Config, not the process environment: a packaged bundle runs `artisan
+        // optimize` at startup, and a cached configuration makes Laravel skip
+        // Dotenv, so the putenv bridge never fires and getenv answers false for
+        // every key the staged .env carries. This said `dev` on a 2.0.0 bundle.
+        $version = $this->config->get('nativephp.version');
         $rawSqliteVersion = $this->db->connection()->scalar('SELECT sqlite_version()');
 
         return [
             'status' => 'ok',
-            'app_version' => is_string($envVersion) && $envVersion !== '' ? $envVersion : 'dev',
+            'app_version' => is_string($version) && $version !== '' ? $version : 'dev',
             'php_version' => PHP_VERSION,
             'sqlite_version' => is_string($rawSqliteVersion) ? $rawSqliteVersion : '',
             'network_boundary' => $this->boundary->state()->value,
