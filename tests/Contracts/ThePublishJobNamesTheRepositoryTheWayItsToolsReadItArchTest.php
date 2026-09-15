@@ -126,10 +126,10 @@ it('lists every published asset exactly once', function (): void {
     }
 
     expect($duplicated)->toBe([], sprintf(
-        "The upload list names these beside `artifacts/**/*`, which already matches them, so each is uploaded twice and the pair races:
-  %s",
-        implode("
-  ", $duplicated),
+        'The upload list names these beside `artifacts/**/*`, which already matches them, so each is uploaded twice and the pair races:
+  %s',
+        implode('
+  ', $duplicated),
     ));
 
     expect(str_contains($publish, 'files: artifacts/**/*'))
