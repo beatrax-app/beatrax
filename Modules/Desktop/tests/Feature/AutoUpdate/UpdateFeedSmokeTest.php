@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Config\Repository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\Client\Factory as HttpClient;
@@ -10,11 +11,11 @@ use Illuminate\Support\Facades\Http;
 use Modules\Core\Internal\AutoUpdate\HttpPublisherManifestFetcher;
 use Modules\Core\Models\User;
 use Modules\Core\Public\Actions\RecordUpdateAvailableAlert;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\SystemAlertSeverity;
 use Modules\Core\Public\Enums\UpdateAlertKind;
 use Modules\Core\Public\Services\ElectronUpdateChannel;
 use Modules\Core\Public\Services\SystemAlertWriter;
-use Modules\Core\Public\Services\SystemClock;
 use Modules\Core\Public\Services\UpdateChannelPreference;
 use Modules\Core\Public\Services\UpdateCheckPreference;
 use Modules\Core\Public\Support\Lang;
@@ -76,12 +77,29 @@ function smokeFetcher(string $platformFamily): HttpPublisherManifestFetcher
     );
 }
 
+// The manifests below carry an absolute publish date, and the channel calls a
+// release stale once it is more than STALE_THRESHOLD_DAYS old. Read against the
+// wall clock that made the fixture an expiry date: on the thirty-first day the
+// banner these tests assert on silently became `update.stale` and every one of
+// them failed at once. Pinning `now` to the fixture keeps the pair together, so
+// the assertions stay about signing and plumbing rather than the calendar.
+function smokeClock(): Clock
+{
+    return new class implements Clock
+    {
+        public function now(): CarbonImmutable
+        {
+            return CarbonImmutable::parse(SMOKE_RELEASE_DATE)->addDay();
+        }
+    };
+}
+
 function smokeChannel(string $publicKeyHex): ElectronUpdateChannel
 {
     return new ElectronUpdateChannel(
         app(DatabaseManager::class),
         new NullLogger,
-        new SystemClock,
+        smokeClock(),
         new Repository(['auto_update' => ['publisher_public_key_hex' => $publicKeyHex]]),
         app(UpdateChannelPreference::class),
     );
