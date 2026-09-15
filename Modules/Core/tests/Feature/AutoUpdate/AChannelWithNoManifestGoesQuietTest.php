@@ -2,15 +2,16 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Config\Repository;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\Client\Factory as HttpClient;
 use Illuminate\Support\Facades\Http;
 use Modules\Core\Internal\AutoUpdate\HttpPublisherManifestFetcher;
 use Modules\Core\Models\User;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Enums\UpdateChannel;
 use Modules\Core\Public\Services\ElectronUpdateChannel;
-use Modules\Core\Public\Services\SystemClock;
 use Modules\Core\Public\Services\UpdateChannelPreference;
 use Modules\Core\Public\Services\UpdateCheckPreference;
 use Modules\Core\Tests\Support\EuvRecordingLogger;
@@ -25,6 +26,7 @@ use Modules\Core\Tests\Support\EuvRecordingLogger;
 // — so a banner or an error there would only be noise they cannot clear.
 
 const QUIET_CHANNEL_FEED = 'https://feed.quiet-channel.test';
+const QUIET_CHANNEL_RELEASE_DATE = '2026-09-01T00:00:00.000Z';
 
 /** @return array{0: string, 1: string} [secretKey, publicKeyHex] */
 function quietChannelKeypair(): array
@@ -55,7 +57,7 @@ function quietChannelFeed(array $versionsByManifestName, string $secretKey): voi
             continue;
         }
 
-        $body = sprintf("version: %s\nsha512: ", $version).base64_encode(str_repeat("\x07", 64))."\nreleaseDate: '2026-09-01T00:00:00.000Z'\n";
+        $body = sprintf("version: %s\nsha512: ", $version).base64_encode(str_repeat("\x07", 64)).sprintf("\nreleaseDate: '%s'\n", QUIET_CHANNEL_RELEASE_DATE);
 
         $fakes[QUIET_CHANNEL_FEED.'/'.$name] = Http::response($body, 200);
         $fakes[QUIET_CHANNEL_FEED.'/'.$name.'.sig'] = Http::response(
@@ -84,12 +86,26 @@ function quietChannelFetcher(EuvRecordingLogger $logger): HttpPublisherManifestF
     );
 }
 
+// A clock this test owns. The channel calls a release stale once it is past a
+// rolling threshold, so a manifest date read against the wall clock is an expiry
+// date nobody chose -- it took the whole banner suite red mid-release once.
+function quietChannelClock(): Clock
+{
+    return new class implements Clock
+    {
+        public function now(): CarbonImmutable
+        {
+            return CarbonImmutable::parse(QUIET_CHANNEL_RELEASE_DATE)->addDay();
+        }
+    };
+}
+
 function quietChannelUpdates(EuvRecordingLogger $logger, string $publicKeyHex): ElectronUpdateChannel
 {
     return new ElectronUpdateChannel(
         app(DatabaseManager::class),
         $logger,
-        new SystemClock,
+        quietChannelClock(),
         new Repository(['auto_update' => ['publisher_public_key_hex' => $publicKeyHex]]),
         app(UpdateChannelPreference::class),
     );

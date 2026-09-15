@@ -6,11 +6,11 @@ use Carbon\CarbonImmutable;
 use Illuminate\Config\Repository;
 use Illuminate\Database\DatabaseManager;
 use Modules\Core\Public\Actions\RecordUpdateAvailableAlert;
+use Modules\Core\Public\Contracts\Clock;
 use Modules\Core\Public\Contracts\PublisherManifestFetcher;
 use Modules\Core\Public\Enums\UpdateChannel;
 use Modules\Core\Public\Services\ElectronUpdateChannel;
 use Modules\Core\Public\Services\SystemAlertWriter;
-use Modules\Core\Public\Services\SystemClock;
 use Modules\Core\Public\Services\UpdateChannelPreference;
 use Modules\Desktop\Internal\Listeners\VerifyAndAnnounceUpdate;
 use Modules\Desktop\Internal\Listeners\VerifyAndInstallDownload;
@@ -22,16 +22,18 @@ use Psr\Log\NullLogger;
 /**
  * @return array{body: string, signature: string, latest_version: string, sha512_hex: string, published_at: CarbonImmutable}
  */
+const CONSENT_GATE_RELEASE_DATE = '2026-08-16T00:00:00.000Z';
+
 function consentGateSignedManifest(string $version, string $sha512Hex, string $secretKey): array
 {
-    $body = sprintf("version: %s\nsha512: normalised-elsewhere\nreleaseDate: '2026-08-16T00:00:00.000Z'\n", $version);
+    $body = sprintf("version: %s\nsha512: normalised-elsewhere\nreleaseDate: '%s'\n", $version, CONSENT_GATE_RELEASE_DATE);
 
     return [
         'body' => $body,
         'signature' => sodium_crypto_sign_detached($body, $secretKey),
         'latest_version' => $version,
         'sha512_hex' => $sha512Hex,
-        'published_at' => CarbonImmutable::parse('2026-08-16T00:00:00.000Z'),
+        'published_at' => CarbonImmutable::parse(CONSENT_GATE_RELEASE_DATE),
     ];
 }
 
@@ -52,12 +54,26 @@ function consentGateFetcher(?array $manifest): PublisherManifestFetcher
     };
 }
 
+// Pinned beside the fixture date for the reason recorded in UpdateFeedSmokeTest:
+// a real clock turns an absolute manifest date into an expiry date, and the
+// gate under test then writes `update.stale` instead of the row asserted here.
+function consentGateClock(): Clock
+{
+    return new class implements Clock
+    {
+        public function now(): CarbonImmutable
+        {
+            return CarbonImmutable::parse(CONSENT_GATE_RELEASE_DATE)->addDay();
+        }
+    };
+}
+
 function consentGateChannel(string $publicKeyHex): ElectronUpdateChannel
 {
     return new ElectronUpdateChannel(
         app(DatabaseManager::class),
         new NullLogger,
-        new SystemClock,
+        consentGateClock(),
         new Repository(['auto_update' => ['publisher_public_key_hex' => $publicKeyHex]]),
         app(UpdateChannelPreference::class),
     );
@@ -65,7 +81,7 @@ function consentGateChannel(string $publicKeyHex): ElectronUpdateChannel
 
 function consentGateAvailableEvent(string $version): UpdateAvailable
 {
-    return new UpdateAvailable($version, [['url' => 'app.exe', 'sha512' => 'x', 'size' => 1]], '2026-08-16T00:00:00.000Z');
+    return new UpdateAvailable($version, [['url' => 'app.exe', 'sha512' => 'x', 'size' => 1]], CONSENT_GATE_RELEASE_DATE);
 }
 
 function consentGateUpdateAlerts(): int
@@ -140,7 +156,7 @@ it('installs a downloaded binary only after signature and SHA512 both verify', f
         $updater,
         new NullLogger,
         app(SystemAlertWriter::class),
-    ))->handle(new UpdateDownloaded($file, '1.2.3', [], '2026-08-16T00:00:00.000Z'));
+    ))->handle(new UpdateDownloaded($file, '1.2.3', [], CONSENT_GATE_RELEASE_DATE));
 
     @unlink($file);
 });
@@ -162,7 +178,7 @@ it('refuses to install a binary whose hash does not match the signed manifest', 
         $updater,
         new NullLogger,
         app(SystemAlertWriter::class),
-    ))->handle(new UpdateDownloaded($file, '1.2.3', [], '2026-08-16T00:00:00.000Z'));
+    ))->handle(new UpdateDownloaded($file, '1.2.3', [], CONSENT_GATE_RELEASE_DATE));
 
     @unlink($file);
 });
