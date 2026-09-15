@@ -1458,6 +1458,13 @@ jobs:
         needs: publish
         runs-on: ubuntu-latest
         timeout-minutes: 5
+        # This job only reads, and still needs write. A stable tag publishes as
+        # a draft, and GitHub shows a draft release only to a token with push
+        # access -- `contents: read` does not see it at all, and `gh release
+        # download` answers `release not found` rather than anything about
+        # permissions. There is no narrower scope that can read a draft.
+        permissions:
+            contents: write
         steps:
             - name: Check out the source
               uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
